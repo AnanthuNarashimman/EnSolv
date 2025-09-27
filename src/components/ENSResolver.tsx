@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { http } from "viem";
 import { mainnet } from "viem/chains";
 import { createEnsPublicClient } from "@ensdomains/ensjs";
+import toast from 'react-hot-toast';
 import { RealPortfolioAPI } from "../services/realPortfolioAPI";
 import type { PortfolioData } from "../types/portfolio";
 import PortfolioDashboard from './PortfolioDashboard';
@@ -45,14 +46,32 @@ const ENSResolver = () => {
   const fetchPortfolio = useCallback(async (address: string) => {
     console.log("🔍 Fetching portfolio for address:", address);
     setPortfolioLoading(true);
+    const loadingToast = toast.loading('Fetching portfolio data...');
+    
     try {
       const data = await RealPortfolioAPI.getPortfolio(address);
       console.log("✅ Portfolio data received:", data);
       setPortfolioData(data);
       setCurrentView("portfolio");
+      toast.success(
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            📊 Portfolio Loaded!
+          </div>
+          <div style={{ fontSize: '12px', opacity: 0.8 }}>
+            Found {data.tokenHoldings.length} tokens across multiple networks
+          </div>
+        </div>,
+        { id: loadingToast, duration: 4000 }
+      );
     } catch (err) {
       console.error("❌ Portfolio fetch failed:", err);
-      setError(`Failed to fetch portfolio: ${(err as Error).message}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(`Failed to fetch portfolio: ${errorMessage}`);
+      toast.error(
+        `Portfolio fetch failed: ${errorMessage}`,
+        { id: loadingToast, duration: 6000 }
+      );
     } finally {
       setPortfolioLoading(false);
     }
@@ -66,6 +85,8 @@ const ENSResolver = () => {
     setPortfolioData(null);
     setCurrentView("resolver");
 
+    const loadingToast = toast.loading(`Resolving ${ensName}...`);
+
     try {
       if (!rpcUrl) {
         throw new Error(
@@ -73,12 +94,15 @@ const ENSResolver = () => {
         );
       }
 
+      toast.loading('Resolving ENS name...', { id: loadingToast });
+      
       // Primary resolution via ethers.js
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       let address = await provider.resolveName(ensName);
 
       // If ethers fails to resolve, fall back to ENSJS
       if (!address) {
+        toast.loading('Trying alternative resolution...', { id: loadingToast });
         // Note: Using type assertion as mainnet chain is compatible with ENS client
         const client = createEnsPublicClient({
           chain: mainnet as unknown as Parameters<typeof createEnsPublicClient>[0]['chain'],
@@ -92,15 +116,31 @@ const ENSResolver = () => {
       }
 
       if (!address) {
-        throw new Error("Could not resolve ENS name");
+        throw new Error("Could not resolve ENS name. Please check the name and try again.");
       }
 
       setResolvedAddress(address);
+      toast.success(
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            🎉 ENS Resolved!
+          </div>
+          <div style={{ fontSize: '12px', opacity: 0.8 }}>
+            {ensName} → {address.slice(0, 10)}...
+          </div>
+        </div>,
+        { id: loadingToast, duration: 3000 }
+      );
 
       // Automatically fetch portfolio after successful ENS resolution
       await fetchPortfolio(address);
     } catch (err) {
-      setError((err as Error).message);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      toast.error(
+        `ENS resolution failed: ${errorMessage}`,
+        { id: loadingToast, duration: 6000 }
+      );
     } finally {
       setLoading(false);
     }
@@ -108,7 +148,12 @@ const ENSResolver = () => {
 
   const handleRefreshPortfolio = async () => {
     if (resolvedAddress) {
-      await fetchPortfolio(resolvedAddress);
+      try {
+        await fetchPortfolio(resolvedAddress);
+      } catch (err) {
+        // Error handling is done in fetchPortfolio
+        console.error('Refresh failed:', err);
+      }
     }
   };
 

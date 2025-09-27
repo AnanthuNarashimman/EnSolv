@@ -4,6 +4,7 @@ import ENSResolver from "./components/ENSResolver";
 import SwapComponent from "./components/SwapComponent";
 import MetaMaskModal from "./components/MetaMaskModal";
 import APIStatus from "./components/APIStatus";
+import { ToastProvider } from "./providers/ToastProvider";
 import { useWalletContext } from "./contexts/WalletContext";
 
 type View = "portfolio" | "swap";
@@ -60,7 +61,8 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <ToastProvider>
+      <div className="app">
       <nav style={styles.nav}>
         <div style={styles.navGlass}></div>
         <div style={styles.navInner}>
@@ -244,6 +246,7 @@ function App() {
       {/* API Status in development mode */}
       {import.meta.env.DEV && <APIStatus />}
     </div>
+    </ToastProvider>
   );
 }
 

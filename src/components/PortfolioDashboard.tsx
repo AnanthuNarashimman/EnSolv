@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   PieChart,
   Pie,
@@ -12,11 +12,12 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import SwapModal from './SwapModal';
 import type { PortfolioData, TokenHolding } from "../types/portfolio";
 
 interface PortfolioDashboardProps {
   portfolioData: PortfolioData;
-  onRefresh?: () => void;
+  onRefresh: () => void;
   isLoading: boolean;
 }
 
@@ -30,6 +31,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
   isLoading,
 }) => {
   const { summary, tokenHoldings, liquidityPositions } = portfolioData;
+  const [showSwapModal, setShowSwapModal] = useState(false);
 
   // Prepare data for network distribution pie chart
   const networkColors: Record<string, string> = {
@@ -112,7 +114,14 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
     <div style={styles.container} className="container">
       <div style={styles.header}>
         <h2 style={styles.title}>Portfolio Dashboard</h2>
-        {onRefresh && (
+        <div style={styles.headerButtons}>
+          <button
+            onClick={() => setShowSwapModal(true)}
+            style={styles.swapButton}
+            disabled={isLoading || tokenHoldings.length === 0}
+          >
+            🔄 Swap Tokens
+          </button>
           <button
             onClick={onRefresh}
             style={styles.refreshButton}
@@ -120,7 +129,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
           >
             {isLoading ? "Refreshing..." : "Refresh"}
           </button>
-        )}
+        </div>
       </div>
 
       {/* Portfolio Summary */}
@@ -343,6 +352,13 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
           </p>
         )}
       </div>
+
+      {/* Swap Modal - Powered by Katana Network */}
+      <SwapModal
+        isOpen={showSwapModal}
+        onClose={() => setShowSwapModal(false)}
+        portfolioTokens={tokenHoldings}
+      />
     </div>
   );
 };
@@ -360,6 +376,26 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "30px",
     flexDirection: "column",
     gap: "15px",
+  },
+  headerButtons: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+  },
+  swapButton: {
+    padding: "10px 20px",
+    background: "linear-gradient(135deg, #8247e5 0%, #6b34d1 100%)",
+    color: "white",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: 600,
+    boxShadow: "0 4px 12px rgba(130, 71, 229, 0.3)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
   },
   title: {
     fontSize: "1.75rem",
