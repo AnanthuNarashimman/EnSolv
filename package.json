@@ -12,7 +12,7 @@
   "dependencies": {
     "@ensdomains/ensjs": "^4.0.2",
     "chains": "link:@ensdomains/ensjs/chains",
-    "dotenv": "^17.2.2",
+    "dotenv": "^16.3.1",
     "ethers": "^6.15.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
