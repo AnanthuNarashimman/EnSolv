@@ -3,10 +3,14 @@ import request from 'supertest';
 import express from 'express';
 import cors from 'cors';
 import { ethers } from 'ethers';
-import { getPortfolioData } from '../portfolioService.js';
 
 // Mock the portfolio service
-jest.mock('../portfolioService.js');
+jest.unstable_mockModule('../portfolioService.js', () => ({
+  getPortfolioData: jest.fn()
+}));
+
+// Import the mocked module
+const { getPortfolioData } = await import('../portfolioService.js');
 
 // Create test app
 const createTestApp = () => {
@@ -165,6 +169,46 @@ const createTestApp = () => {
 describe('API Integration Tests', () => {
   let app;
 
+  // Mock data used across tests
+  const mockPortfolioData = {
+    address: '0x742d35cc6634c0532925a3b8d4c9db96c4b4d8b6',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    summary: {
+      totalUsdValue: 46000,
+      networkTotals: {
+        polygon: 1000,
+        rootstock: 45000
+      },
+      tokenCount: 2,
+      liquidityPositionCount: 0
+    },
+    tokenHoldings: [
+      {
+        network: 'polygon',
+        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+        symbol: 'USDC',
+        name: 'USD Coin',
+        decimals: 6,
+        amount: '1000',
+        price: 1,
+        usdValue: 1000,
+        type: 'token'
+      },
+      {
+        network: 'rootstock',
+        address: '0x542fda317318ebf1d3deaf76e0b632741a7e677d',
+        symbol: 'RBTC',
+        name: 'Rootstock BTC',
+        decimals: 18,
+        amount: '1',
+        price: 45000,
+        usdValue: 45000,
+        type: 'token'
+      }
+    ],
+    liquidityPositions: []
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     app = createTestApp();
@@ -186,44 +230,6 @@ describe('API Integration Tests', () => {
   });
 
   describe('GET /portfolio', () => {
-    const mockPortfolioData = {
-      address: '0x742d35cc6634c0532925a3b8d4c9db96c4b4d8b6',
-      updatedAt: '2024-01-01T00:00:00.000Z',
-      summary: {
-        totalUsdValue: 46000,
-        networkTotals: {
-          polygon: 1000,
-          rootstock: 45000
-        },
-        tokenCount: 2,
-        liquidityPositionCount: 0
-      },
-      tokenHoldings: [
-        {
-          network: 'polygon',
-          address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-          symbol: 'USDC',
-          name: 'USD Coin',
-          decimals: 6,
-          amount: '1000',
-          price: 1,
-          usdValue: 1000,
-          type: 'token'
-        },
-        {
-          network: 'rootstock',
-          address: '0x542fda317318ebf1d3deaf76e0b632741a7e677d',
-          symbol: 'RBTC',
-          name: 'Rootstock BTC',
-          decimals: 18,
-          amount: '1',
-          price: 45000,
-          usdValue: 45000,
-          type: 'token'
-        }
-      ],
-      liquidityPositions: []
-    };
 
     it('should return portfolio data for valid address', async () => {
       getPortfolioData.mockResolvedValueOnce(mockPortfolioData);
