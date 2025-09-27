@@ -1,0 +1,95 @@
+Create a modern, professional ENS Portfolio Dashboard web application with the following specifications:
+
+Project Overview
+Build a sleek, Web3-focused portfolio management interface called "Ensolv" that resolves ENS names to wallet addresses and displays comprehensive portfolio analytics across multiple blockchain networks.
+
+Design Requirements
+
+Visual Style
+- Theme: Modern fintech/Web3 aesthetic with dark mode support
+- Color Palette: Primary purple (#8247e5), secondary orange (#ff6b35), with clean whites/grays
+- Typography: Modern sans-serif (Inter or similar), clear hierarchy
+- Layout: Clean, spacious, card-based design with subtle shadows and rounded corners
+- Responsive: Mobile-first design that works on all devices
+
+Navigation & Layout
+- Header: Fixed top navigation bar with "Ensolv" logo and two tabs: "Portfolio" and "Swap"
+- Background: Subtle gradient or pattern, not distracting
+- Container: Centered content with max-width, proper spacing
+
+Main Components
+
+1. ENS Resolver Section
+- Input Field: Large, prominent search bar with placeholder "Enter ENS name (e.g., vitalik.eth)"
+- Button: Gradient "Resolve ENS" button with loading spinner animation
+- States: Show loading spinner, success with checkmark, error states with clear messaging
+- Visual: Make it feel like a search engine - clean and focused
+
+2. Portfolio Dashboard (after successful resolution)
+- Header Section: 
+  - Back button to return to resolver
+  - Display resolved ENS name and wallet address (truncated with copy button)
+  - Last updated timestamp
+
+- Summary Cards (3-column grid on desktop, stack on mobile):
+  - Total Portfolio Value (large, prominent USD amount)
+  - Number of Tokens (with icon)
+  - Liquidity Positions (with icon)
+
+3. Data Visualization
+- Network Distribution: Beautiful pie chart showing Polygon vs Rootstock allocation
+- Top Holdings: Horizontal bar chart or card layout showing top 5-10 tokens
+- Use modern chart library styling: Clean axes, hover effects, tooltips
+
+4. Token Holdings Table
+- Design: Clean table with alternating row colors, sortable columns
+- Columns: Token logo/name, Network badge, Balance, USD Value
+- Features: Search/filter, pagination if needed
+- Mobile: Cards instead of table on small screens
+
+5. Loading & Error States
+- Loading: Skeleton loaders, smooth transitions, professional spinners
+- Errors: Friendly error messages with retry options
+- Empty States: Illustrations or icons explaining what to do next
+
+6. Swap Component (placeholder)
+- Design: Coming soon state with attractive illustration
+- Content: Feature preview cards showing what's coming
+- Style: Consistent with main design but clearly marked as "Coming Soon"
+
+Interactive Elements
+- Hover Effects: Subtle animations on cards and buttons
+- Transitions: Smooth page transitions between views
+- Micro-interactions: Button press effects, loading animations
+- Accessibility: Proper ARIA labels, keyboard navigation
+
+Technical Considerations
+- Framework: React with TypeScript
+- Styling: Tailwind CSS preferred, or CSS modules
+- Charts: Recharts or Chart.js integration points
+- Icons: Lucide React or Heroicons
+- Responsive: Mobile-first approach
+
+Specific UI Patterns
+- Cards: Elevated cards with subtle shadows for different sections
+- Network Badges: Colored pills/badges for Polygon (purple) and Rootstock (orange)
+- Currency Display: Proper formatting with $ symbol, commas, decimal places
+- Address Display: Monospace font, truncation with tooltip on hover
+- Status Indicators: Clear success/error/loading states with appropriate colors
+
+User Experience Flow
+1. User lands on clean ENS resolver page
+2. Types ENS name, sees real-time validation
+3. Clicks resolve, sees loading animation
+4. Seamless transition to portfolio dashboard
+5. Can navigate between Portfolio and Swap tabs
+6. All interactions feel smooth and professional
+
+Additional Features
+- Copy to Clipboard: For addresses and values
+- Refresh Button: Reload portfolio data
+- Tooltips: Explain technical terms
+- Dark/Light Mode: Toggle in header
+- Export: Button to export portfolio data
+
+Make it feel like a premium fintech application that crypto users would trust with their portfolio data. The design should be modern, clean, and professional while maintaining the Web3 aesthetic.

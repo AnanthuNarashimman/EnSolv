@@ -1,42 +1,765 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+    margin: 0;
+    padding: 0;
+    text-align: left;
 }
 
 .logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+    height: 6em;
+    padding: 1.5em;
+    will-change: filter;
+    transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+    filter: drop-shadow(0 0 2em #646cffaa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+    filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+    a:nth-of-type(2) .logo {
+        animation: logo-spin infinite 20s linear;
+    }
 }
 
 .card {
-  padding: 2em;
+    padding: 2em;
 }
 
 .read-the-docs {
-  color: #888;
+    color: #888;
+}
+
+.app {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fafbff 0%, #e8ecfa 100%);
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Modern Nav Hover Effects */
+nav button:hover {
+    transform: translateY(-1px);
+}
+
+nav button:active {
+    transform: translateY(0);
+}
+
+/* Input Focus States */
+input[type="text"]:focus {
+    border-color: rgba(130, 71, 229, 0.4) !important;
+    background: rgba(255, 255, 255, 1) !important;
+    box-shadow:
+        0 0 0 4px rgba(130, 71, 229, 0.1),
+        0 4px 12px rgba(130, 71, 229, 0.15) !important;
+}
+
+input[type="text"]:hover:not(:focus) {
+    border-color: rgba(130, 71, 229, 0.25) !important;
+}
+
+/* Button Hover Effects */
+button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(130, 71, 229, 0.4) !important;
+}
+
+button:not(:disabled):active {
+    transform: translateY(0);
+}
+
+/* Back Button Hover */
+button:has(.back-icon):hover .back-icon,
+button:has(span:contains("←")):hover span:first-child {
+    transform: translateX(-3px);
+}
+
+/* Portfolio Header Button Effects */
+.portfolio-header button:hover {
+    background: rgba(130, 71, 229, 0.12) !important;
+    border-color: rgba(130, 71, 229, 0.3) !important;
+    transform: translateX(-4px);
+}
+
+.connect-wallet:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(130, 71, 229, 0.35) !important;
+}
+
+.connect-wallet:active {
+    transform: translateY(0) scale(1);
+}
+
+.app::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background-image:
+        radial-gradient(
+            circle at 20% 80%,
+            rgba(130, 71, 229, 0.1) 0%,
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 80% 20%,
+            rgba(107, 52, 209, 0.08) 0%,
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 40% 40%,
+            rgba(130, 71, 229, 0.06) 0%,
+            transparent 50%
+        );
+    pointer-events: none;
+    z-index: 0;
+}
+
+.app > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Landing Section Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Feature Card Hover Effects */
+.feature-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(130, 71, 229, 0.15);
+    border-color: rgba(130, 71, 229, 0.3);
+    background: linear-gradient(
+        135deg,
+        rgba(130, 71, 229, 0.08) 0%,
+        rgba(130, 71, 229, 0.03) 100%
+    );
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.15) rotate(5deg);
+}
+
+.feature-icon {
+    transition: transform 0.3s ease;
+}
+
+/* CTA Button Effects */
+.cta-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(130, 71, 229, 0.4);
+}
+
+.cta-button:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 24px rgba(130, 71, 229, 0.3);
+}
+
+.cta-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: left 0.6s ease;
+}
+
+.cta-button:hover::before {
+    left: 100%;
+}
+
+/* Landing Content Entrance Animation */
+.landing-content {
+    animation: fadeInUp 0.8s ease-out;
+    animation-fill-mode: both;
+}
+
+.landing-headline {
+    animation: fadeInUp 0.8s ease-out;
+    animation-delay: 0.1s;
+    animation-fill-mode: both;
+}
+
+.landing-description {
+    animation: fadeInUp 0.8s ease-out;
+    animation-delay: 0.2s;
+    animation-fill-mode: both;
+}
+
+.feature-grid > * {
+    animation: fadeInUp 0.8s ease-out;
+    animation-fill-mode: both;
+}
+
+.feature-grid > *:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.feature-grid > *:nth-child(2) {
+    animation-delay: 0.4s;
+}
+
+.feature-grid > *:nth-child(3) {
+    animation-delay: 0.5s;
+}
+
+.cta-section {
+    animation: fadeInUp 0.8s ease-out;
+    animation-delay: 0.6s;
+    animation-fill-mode: both;
+}
+
+/* Gradient Text Animation */
+.gradient-text {
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Modern Header Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        width: 0;
+    }
+    to {
+        opacity: 1;
+        width: 24px;
+    }
+}
+
+@keyframes gridMove {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(50px, 50px);
+    }
+}
+
+@keyframes glow {
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translateX(-50%) scale(1.1);
+    }
+}
+
+/* Enhanced pulse for wallet indicator */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+    }
+}
+
+/* Error Toast Animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Smooth Transitions for Interactive Elements */
+input,
+button,
+a {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input {
+    transition:
+        border-color 0.3s ease,
+        background-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+button {
+    position: relative;
+    overflow: hidden;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        background 0.3s ease;
+}
+
+/* Nav Link Smooth Transitions */
+.nav-link {
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+/* Decorative Elements */
+.landing-section {
+    position: relative;
+}
+
+.landing-section::before {
+    content: "";
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(
+        circle,
+        rgba(130, 71, 229, 0.15) 0%,
+        transparent 70%
+    );
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.landing-section::after {
+    content: "";
+    position: absolute;
+    bottom: -150px;
+    right: -150px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(
+        circle,
+        rgba(255, 107, 53, 0.1) 0%,
+        transparent 70%
+    );
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite reverse;
+    pointer-events: none;
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-3px) rotate(2deg);
+    }
+    75% {
+        transform: translateY(3px) rotate(-2deg);
+    }
+}
+
+/* Mesh Gradient Background */
+.hero-content {
+    position: relative;
+    background:
+        radial-gradient(
+            ellipse at top left,
+            rgba(130, 71, 229, 0.03) 0%,
+            transparent 40%
+        ),
+        radial-gradient(
+            ellipse at bottom right,
+            rgba(107, 52, 209, 0.03) 0%,
+            transparent 40%
+        );
+    padding: 40px;
+    border-radius: 32px;
+}
+
+/* Stats Container Enhanced Background */
+.stats-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(130, 71, 229, 0.05),
+        transparent
+    );
+    animation: shimmerStats 3s infinite;
+}
+
+@keyframes shimmerStats {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Feature Cards Glow Effect */
+.feature-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+        circle at center,
+        rgba(130, 71, 229, 0) 0%,
+        rgba(130, 71, 229, 0.05) 100%
+    );
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.feature-card:hover::before {
+    opacity: 1;
+}
+
+/* Wallet Option Styles */
+.wallet-option {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.use-wallet-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(74, 222, 128, 0.35) !important;
+}
+
+.use-wallet-button:active {
+    transform: translateY(0);
+}
+
+/* Divider with line-through effect */
+.divider {
+    position: relative;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(130, 71, 229, 0.15) 20%,
+        rgba(130, 71, 229, 0.15) 80%,
+        transparent 100%
+    );
+}
+
+.divider-text {
+    position: relative;
+    display: inline-block;
+    padding: 0 16px;
+    background: inherit;
+    z-index: 1;
+}
+
+/* Wallet Address Button Hover */
+.wallet-address:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(74, 222, 128, 0.35) !important;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.wallet-address:active {
+    transform: scale(1);
+}
+
+/* Connected Wallet Info Animation */
+.wallet-info {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Wallet Dropdown Styles */
+.wallet-address:hover {
+    background: rgba(130, 71, 229, 0.08) !important;
+    border-color: rgba(130, 71, 229, 0.3) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(130, 71, 229, 0.15) !important;
+}
+
+.wallet-address:active {
+    transform: translateY(0);
+}
+
+.wallet-dropdown[data-open="true"] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    animation: slideDown 0.2s ease-out;
+}
+
+.dropdown-item:hover {
+    background: rgba(130, 71, 229, 0.08) !important;
+}
+
+.dropdown-item:active {
+    background: rgba(130, 71, 229, 0.12) !important;
+}
+
+.dropdown-item-danger:hover {
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.dropdown-item-danger:active {
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+
+/* MetaMask Logo Animation */
+.metamask-logo {
+    transition: transform 0.3s ease;
+}
+
+.wallet-address:hover .metamask-logo {
+    transform: rotate(-10deg) scale(1.1);
+}
+
+/* Copy Success Toast */
+@keyframes slideInOut {
+    0% {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    80% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+.copy-toast {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    color: white;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(74, 222, 128, 0.3);
+    animation: slideInOut 2s ease-out;
+    z-index: 10001;
+}
+
+/* Modal Animations */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dropdown Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Feature Card Enhanced Hover */
+.feature-card {
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.feature-card:hover {
+    transform: translateY(-12px) scale(1.02);
+}
+
+/* CTA Button Ripple Effect */
+.cta-button {
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-button::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition:
+        width 0.6s,
+        height 0.6s;
+}
+
+.cta-button:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Animated Dots Pattern */
+@keyframes moveDots {
+    0% {
+        background-position:
+            0 0,
+            50px 50px;
+    }
+    100% {
+        background-position:
+            50px 50px,
+            100px 100px;
+    }
+}
+
+.resolver-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.resolver-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        radial-gradient(circle, rgba(130, 71, 229, 0.1) 1px, transparent 1px),
+        radial-gradient(circle, rgba(130, 71, 229, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-position:
+        0 0,
+        25px 25px;
+    opacity: 0.3;
+    animation: moveDots 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.resolver-card > * {
+    position: relative;
+    z-index: 1;
 }
