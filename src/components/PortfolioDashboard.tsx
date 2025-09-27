@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import type { PortfolioData } from "../types/portfolio";
+import type { PortfolioData, TokenHolding } from "../types/portfolio";
 
 interface PortfolioDashboardProps {
   portfolioData: PortfolioData;
@@ -44,7 +44,13 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
   // Prepare data for token holdings bar chart (top 10 tokens)
   const topTokens = [...tokenHoldings]
     .sort((a, b) => b.usdValue - a.usdValue)
-    .slice(0, 10);
+    .slice(0, 10)
+    .map(token => ({
+      ...token,
+      displayName: token.network === 'ethereum' 
+        ? token.symbol 
+        : `${token.symbol} (${token.network.charAt(0).toUpperCase() + token.network.slice(1)})`
+    }));
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("en-US", {
@@ -111,8 +117,8 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: any) =>
-                    `${props.name}: ${(props.percent * 100).toFixed(1)}%`
+                  label={(props: { name?: string; percent?: number }) =>
+                    `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(1)}%`
                   }
                   outerRadius={80}
                   fill="#8884d8"
@@ -160,15 +166,22 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="symbol" />
+                <XAxis dataKey="displayName" />
                 <YAxis
                   tickFormatter={(value) => `$${value.toLocaleString()}`}
                 />
                 <Tooltip
-                  formatter={(value) => [
-                    formatCurrency(value as number),
+                  formatter={(value: number) => [
+                    formatCurrency(value),
                     "USD Value",
                   ]}
+                  labelFormatter={(label: string, payload: readonly unknown[]) => {
+                    if (payload && payload[0] && typeof payload[0] === 'object' && payload[0] !== null && 'payload' in payload[0]) {
+                      const data = (payload[0] as { payload: TokenHolding }).payload;
+                      return `${data.symbol} on ${data.network.charAt(0).toUpperCase() + data.network.slice(1)} Network`;
+                    }
+                    return label;
+                  }}
                 />
                 <Legend />
                 <Bar dataKey="usdValue" fill="#8247e5" />

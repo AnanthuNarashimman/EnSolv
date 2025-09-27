@@ -47,7 +47,7 @@ export class PortfolioAPI {
       });
       
       return response.data;
-    } catch (error) {
+    } catch {
       throw new Error('Backend service is not available');
     }
   }

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { useWallet } from '../hooks/useWallet';
 
 interface WalletContextType {
@@ -29,6 +30,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWalletContext = (): WalletContextType => {
   const context = useContext(WalletContext);
   if (!context) {

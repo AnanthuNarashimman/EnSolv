@@ -8,7 +8,7 @@ export class DebugUtils {
   /**
    * Log debug information if debug mode is enabled
    */
-  static log(...args: any[]): void {
+  static log(...args: unknown[]): void {
     if (this.isDebugEnabled) {
       console.log('🔍 [Ensolv Debug]', ...args);
     }
@@ -17,7 +17,7 @@ export class DebugUtils {
   /**
    * Log error information
    */
-  static error(...args: any[]): void {
+  static error(...args: unknown[]): void {
     if (this.isDebugEnabled) {
       console.error('❌ [Ensolv Error]', ...args);
     }
@@ -26,7 +26,7 @@ export class DebugUtils {
   /**
    * Log warning information
    */
-  static warn(...args: any[]): void {
+  static warn(...args: unknown[]): void {
     if (this.isDebugEnabled) {
       console.warn('⚠️ [Ensolv Warning]', ...args);
     }
@@ -53,7 +53,7 @@ export class DebugUtils {
   /**
    * Log API call information
    */
-  static logAPICall(method: string, url: string, params?: any): void {
+  static logAPICall(method: string, url: string, params?: unknown): void {
     if (this.isDebugEnabled) {
       console.log('🌐 [Ensolv API]', { method, url, params });
     }
@@ -62,7 +62,7 @@ export class DebugUtils {
   /**
    * Log cache hit/miss information
    */
-  static logCache(type: 'hit' | 'miss', key: string, data?: any): void {
+  static logCache(type: 'hit' | 'miss', key: string, data?: unknown): void {
     if (this.isDebugEnabled) {
       const icon = type === 'hit' ? '✅' : '❌';
       console.log(`${icon} [Ensolv Cache] ${type.toUpperCase()}:`, key, data ? '(with data)' : '');
@@ -72,7 +72,7 @@ export class DebugUtils {
   /**
    * Create a performance monitor wrapper
    */
-  static monitor<T extends (...args: any[]) => Promise<any>>(
+  static monitor<T extends (...args: unknown[]) => Promise<unknown>>(
     fn: T,
     label: string
   ): T {
@@ -81,7 +81,7 @@ export class DebugUtils {
       try {
         const result = await fn(...args);
         this.log(`${label} completed successfully`);
-        return result;
+        return result as Awaited<ReturnType<T>>;
       } catch (error) {
         this.error(`${label} failed:`, error);
         throw error;
@@ -109,7 +109,18 @@ export class DebugUtils {
   /**
    * Create a detailed portfolio analysis for debugging
    */
-  static analyzePortfolio(portfolioData: any): void {
+  static analyzePortfolio(portfolioData: {
+    address?: string;
+    summary?: {
+      totalUsdValue?: number;
+      networkTotals?: Record<string, unknown>;
+    };
+    tokenHoldings?: Array<{
+      symbol: string;
+      usdValue?: number;
+    }>;
+    metadata?: unknown;
+  }): void {
     if (!this.isDebugEnabled) return;
 
     console.group('📊 [Ensolv] Portfolio Analysis');
@@ -119,11 +130,11 @@ export class DebugUtils {
     console.log('Token Count:', portfolioData.tokenHoldings?.length || 0);
     console.log('Networks:', Object.keys(portfolioData.summary?.networkTotals || {}));
     
-    if (portfolioData.tokenHoldings?.length > 0) {
+    if (portfolioData.tokenHoldings && portfolioData.tokenHoldings.length > 0) {
       console.log('Top 5 tokens by value:');
       portfolioData.tokenHoldings
         .slice(0, 5)
-        .forEach((token: any, i: number) => {
+        .forEach((token: { symbol: string; usdValue?: number }, i: number) => {
           console.log(`  ${i + 1}. ${token.symbol}: $${token.usdValue?.toLocaleString()}`);
         });
     }

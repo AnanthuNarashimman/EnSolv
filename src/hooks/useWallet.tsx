@@ -74,18 +74,22 @@ export const useWallet = (): UseWalletReturn => {
         error: null,
         balance,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Wallet connection error:', error);
 
       let errorMessage = 'Failed to connect wallet';
-      if (error.message) {
+      if (error instanceof Error) {
         if (error.message.includes('MetaMask is not installed')) {
           errorMessage = error.message;
-        } else if (error.code === 4001 || error.message.includes('rejected')) {
+        } else if (error.message.includes('rejected')) {
           errorMessage = 'Connection request was rejected';
         } else {
           errorMessage = error.message;
         }
+      } else if (typeof error === 'object' && error !== null && 'code' in error && error.code === 4001) {
+        errorMessage = 'Connection request was rejected';
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
 
       setState(prev => ({
@@ -112,10 +116,10 @@ export const useWallet = (): UseWalletReturn => {
     if (accounts.length === 0) {
       // User disconnected wallet - always disconnect cleanly
       disconnectWallet();
-    } else if (state.address && accounts[0] !== state.address) {
+    } else if (state.address && accounts[0] !== state.address && window.ethereum) {
       // User switched accounts while connected - update the account
       const address = accounts[0];
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum!);
       const balance = await getBalance(address, provider);
 
       setState(prev => ({
@@ -141,15 +145,29 @@ export const useWallet = (): UseWalletReturn => {
   useEffect(() => {
     if (!window.ethereum) return;
 
-    // Add event listeners
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+    // Wrap async handler to match (...args: unknown[]) => void signature
+    const accountsChangedListener = (accounts: unknown) => {
+      if (Array.isArray(accounts)) {
+        // Only call if accounts is an array of strings
+        handleAccountsChanged(accounts as string[]);
+      }
+    };
+
+    window.ethereum.on('accountsChanged', accountsChangedListener);
+
+    // Wrap chainChanged handler to match (...args: unknown[]) => void
+    const chainChangedListener = (chainIdHex: unknown) => {
+      if (typeof chainIdHex === 'string') {
+        handleChainChanged(chainIdHex);
+      }
+    };
+    window.ethereum.on('chainChanged', chainChangedListener);
 
     // Cleanup
     return () => {
-      if (window.ethereum.removeListener) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      if (window.ethereum?.removeListener) {
+        window.ethereum.removeListener('accountsChanged', accountsChangedListener);
+        window.ethereum.removeListener('chainChanged', chainChangedListener);
       }
     };
   }, [handleAccountsChanged, handleChainChanged]);
@@ -159,7 +177,7 @@ export const useWallet = (): UseWalletReturn => {
     if (!state.address || !window.ethereum) return;
 
     const updateBalance = async () => {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum!);
       const balance = await getBalance(state.address!, provider);
       if (balance !== state.balance) {
         setState(prev => ({ ...prev, balance }));
@@ -187,6 +205,11 @@ export const useWallet = (): UseWalletReturn => {
 // Type augmentation for window.ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: {
+      request: (args: {method: string; params?: unknown[]}) => Promise<unknown>;
+      on: (event: string, callback: (...args: unknown[]) => void) => void;
+      removeListener?: (event: string, callback: (...args: unknown[]) => void) => void;
+    };
   }
 }
+

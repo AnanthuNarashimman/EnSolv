@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { http } from "viem";
 import { mainnet } from "viem/chains";
 import { createEnsPublicClient } from "@ensdomains/ensjs";
 import { RealPortfolioAPI } from "../services/realPortfolioAPI";
 import type { PortfolioData } from "../types/portfolio";
-import PortfolioDashboard from "./PortfolioDashboard";
+import PortfolioDashboard from './PortfolioDashboard';
 import { useWalletContext } from "../contexts/WalletContext";
 
 /**
@@ -32,18 +32,21 @@ const ENSResolver = () => {
 
   const rpcUrl = import.meta.env.VITE_ETHEREUM_RPC_URL as string | undefined;
 
-  const fetchPortfolio = async (address: string) => {
+  const fetchPortfolio = useCallback(async (address: string) => {
+    console.log("🔍 Fetching portfolio for address:", address);
     setPortfolioLoading(true);
     try {
       const data = await RealPortfolioAPI.getPortfolio(address);
+      console.log("✅ Portfolio data received:", data);
       setPortfolioData(data);
       setCurrentView("portfolio");
     } catch (err) {
+      console.error("❌ Portfolio fetch failed:", err);
       setError(`Failed to fetch portfolio: ${(err as Error).message}`);
     } finally {
       setPortfolioLoading(false);
     }
-  };
+  }, []);
 
   const onResolve = async () => {
     if (!ensName) return;
@@ -66,8 +69,9 @@ const ENSResolver = () => {
 
       // If ethers fails to resolve, fall back to ENSJS
       if (!address) {
+        // Note: Using type assertion as mainnet chain is compatible with ENS client
         const client = createEnsPublicClient({
-          chain: mainnet as any,
+          chain: mainnet as unknown as Parameters<typeof createEnsPublicClient>[0]['chain'],
           transport: http(rpcUrl),
         });
         // getAddressRecord returns an object {address} – we just need that field
@@ -106,13 +110,22 @@ const ENSResolver = () => {
     setError(null);
   };
 
-  const handleUseConnectedWallet = async () => {
+  const handleUseConnectedWallet = useCallback(async () => {
+    console.log("🔗 Using connected wallet:", connectedAddress);
     if (connectedAddress) {
       setEnsName("");
       setResolvedAddress(connectedAddress);
       await fetchPortfolio(connectedAddress);
     }
-  };
+  }, [connectedAddress, fetchPortfolio]);
+
+  // Auto-fetch portfolio when wallet connects
+  useEffect(() => {
+    if (isConnected && connectedAddress && !portfolioData && currentView === "resolver") {
+      console.log("🚀 Auto-fetching portfolio for connected wallet:", connectedAddress);
+      handleUseConnectedWallet();
+    }
+  }, [isConnected, connectedAddress, portfolioData, currentView, handleUseConnectedWallet]);
 
   return (
     <div style={styles.container}>
@@ -163,7 +176,7 @@ const ENSResolver = () => {
                     alt="MetaMask"
                     style={styles.metamaskIcon}
                   />
-                  Use Connected Wallet
+                  {portfolioLoading ? "Loading Portfolio..." : "Use Connected Wallet"}
                   <span style={styles.walletAddressChip}>
                     {connectedAddress?.slice(0, 6)}...
                     {connectedAddress?.slice(-4)}

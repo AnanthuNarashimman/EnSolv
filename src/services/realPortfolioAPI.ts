@@ -9,11 +9,19 @@ const POLYGON_RPC =
   import.meta.env.VITE_POLYGON_RPC_URL || "https://polygon-rpc.com";
 const BASE_RPC =
   import.meta.env.VITE_BASE_RPC_URL || "https://mainnet.base.org";
+const ARBITRUM_RPC =
+  import.meta.env.VITE_ARBITRUM_RPC_URL || "https://arb1.arbitrum.io/rpc";
+const OPTIMISM_RPC =
+  import.meta.env.VITE_OPTIMISM_RPC_URL || "https://mainnet.optimism.io";
+const BSC_RPC =
+  import.meta.env.VITE_BSC_RPC_URL || "https://bsc-dataseed1.binance.org";
+const AVALANCHE_RPC =
+  import.meta.env.VITE_AVALANCHE_RPC_URL || "https://api.avax.network/ext/bc/C/rpc";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const PRICE_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for prices
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: unknown; timestamp: number }>();
 const priceCache = new Map<string, { data: TokenPrice; timestamp: number }>();
 
 // Rate limiting
@@ -28,6 +36,8 @@ const CHAIN_IDS = {
   arbitrum: 42161,
   optimism: 10,
   base: 8453,
+  bsc: 56,
+  avalanche: 43114,
 };
 
 // Token list for common tokens (fallback if API fails)
@@ -115,6 +125,10 @@ export class RealPortfolioAPI {
     ethereum: new ethers.JsonRpcProvider(ETHEREUM_RPC),
     polygon: new ethers.JsonRpcProvider(POLYGON_RPC),
     base: new ethers.JsonRpcProvider(BASE_RPC),
+    arbitrum: new ethers.JsonRpcProvider(ARBITRUM_RPC),
+    optimism: new ethers.JsonRpcProvider(OPTIMISM_RPC),
+    bsc: new ethers.JsonRpcProvider(BSC_RPC),
+    avalanche: new ethers.JsonRpcProvider(AVALANCHE_RPC),
   };
 
   private static nativeTokens = {
@@ -136,12 +150,36 @@ export class RealPortfolioAPI {
       decimals: 18,
       coingeckoId: "ethereum",
     },
+    arbitrum: {
+      symbol: "ETH",
+      name: "Arbitrum ETH",
+      decimals: 18,
+      coingeckoId: "ethereum",
+    },
+    optimism: {
+      symbol: "ETH",
+      name: "Optimism ETH",
+      decimals: 18,
+      coingeckoId: "ethereum",
+    },
+    bsc: {
+      symbol: "BNB",
+      name: "BNB",
+      decimals: 18,
+      coingeckoId: "binancecoin",
+    },
+    avalanche: {
+      symbol: "AVAX",
+      name: "Avalanche",
+      decimals: 18,
+      coingeckoId: "avalanche-2",
+    },
   };
 
   /**
    * Cache management
    */
-  private static getFromCache(key: string): any | null {
+  private static getFromCache(key: string): unknown | null {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       return cached.data;
@@ -150,7 +188,7 @@ export class RealPortfolioAPI {
     return null;
   }
 
-  private static setCache(key: string, data: any): void {
+  private static setCache(key: string, data: unknown): void {
     cache.set(key, { data, timestamp: Date.now() });
   }
 
@@ -226,21 +264,25 @@ export class RealPortfolioAPI {
       const cached = this.getFromCache(cacheKey);
       if (cached) {
         console.log("Returning cached portfolio for:", address);
-        return cached;
+        return cached as PortfolioData;
       }
 
-      console.log("Fetching real portfolio for:", address);
+      console.log("🔍 Fetching real portfolio for:", address);
 
       // Fetch data from multiple chains in parallel
-      const [ethereumData, polygonData, baseData] = await Promise.allSettled([
+      const [ethereumData, polygonData, baseData, arbitrumData, optimismData, bscData, avalancheData] = await Promise.allSettled([
         this.fetchChainData(address, "ethereum"),
         this.fetchChainData(address, "polygon"),
         this.fetchChainData(address, "base"),
+        this.fetchChainData(address, "arbitrum"),
+        this.fetchChainData(address, "optimism"),
+        this.fetchChainData(address, "bsc"),
+        this.fetchChainData(address, "avalanche"),
       ]);
 
       // Process results
       const allTokens: TokenHolding[] = [];
-      const networkTotals = { ethereum: 0, polygon: 0, rootstock: 0, base: 0 };
+      const networkTotals = { ethereum: 0, polygon: 0, rootstock: 0, base: 0, arbitrum: 0, optimism: 0, bsc: 0, avalanche: 0 };
 
       if (ethereumData.status === "fulfilled" && ethereumData.value) {
         allTokens.push(...ethereumData.value);
@@ -259,8 +301,44 @@ export class RealPortfolioAPI {
       }
 
       if (baseData.status === "fulfilled" && baseData.value) {
+        console.log("✅ Base data received:", baseData.value);
         allTokens.push(...baseData.value);
         networkTotals.base = baseData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+        console.log("💰 Base network total:", networkTotals.base);
+      } else {
+        console.log("❌ Base data failed:", baseData.status === "rejected" ? baseData.reason : "No data");
+      }
+
+      if (arbitrumData.status === "fulfilled" && arbitrumData.value) {
+        allTokens.push(...arbitrumData.value);
+        networkTotals.arbitrum = arbitrumData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+      }
+
+      if (optimismData.status === "fulfilled" && optimismData.value) {
+        allTokens.push(...optimismData.value);
+        networkTotals.optimism = optimismData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+      }
+
+      if (bscData.status === "fulfilled" && bscData.value) {
+        allTokens.push(...bscData.value);
+        networkTotals.bsc = bscData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+      }
+
+      if (avalancheData.status === "fulfilled" && avalancheData.value) {
+        allTokens.push(...avalancheData.value);
+        networkTotals.avalanche = avalancheData.value.reduce(
           (sum, token) => sum + token.usdValue,
           0,
         );
@@ -311,16 +389,19 @@ export class RealPortfolioAPI {
    */
   private static async fetchChainData(
     address: string,
-    network: "ethereum" | "polygon" | "base",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
   ): Promise<TokenHolding[]> {
+    console.log(`🔗 Fetching ${network} data for:`, address);
     try {
       const tokens: TokenHolding[] = [];
 
       // Get native token balance
       const nativeBalance = await this.getNativeBalance(address, network);
+      console.log(`💰 ${network} native balance:`, nativeBalance);
       if (nativeBalance > 0) {
         const nativeInfo = this.nativeTokens[network];
         const price = await this.getTokenPrice(nativeInfo.coingeckoId);
+        console.log(`💲 ${network} price:`, price);
 
         tokens.push({
           symbol: nativeInfo.symbol,
@@ -377,7 +458,7 @@ export class RealPortfolioAPI {
    */
   private static async getNativeBalance(
     address: string,
-    network: "ethereum" | "polygon" | "base",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
   ): Promise<number> {
     try {
       const provider = this.providers[network];
@@ -394,7 +475,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchTokenBalancesCovalent(
     address: string,
-    network: "ethereum" | "polygon" | "base" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
   ): Promise<TokenHolding[]> {
     try {
       const chainId = CHAIN_IDS[network];
@@ -451,7 +532,7 @@ export class RealPortfolioAPI {
    */
   private static async discoverTokensAdvanced(
     address: string,
-    network: "ethereum" | "polygon" | "base",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
 
@@ -468,6 +549,18 @@ export class RealPortfolioAPI {
         base: [
           "https://tokens.uniswap.org", // Uniswap supports Base
         ],
+        arbitrum: [
+          "https://tokens.uniswap.org", // Uniswap supports Arbitrum
+        ],
+        optimism: [
+          "https://tokens.uniswap.org", // Uniswap supports Optimism
+        ],
+        bsc: [
+          "https://tokens.pancakeswap.finance/pancakeswap-extended.json",
+        ],
+        avalanche: [
+          "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/joe.tokenlist.json",
+        ],
       };
 
       const urls = tokenListUrls[network] || [];
@@ -480,7 +573,7 @@ export class RealPortfolioAPI {
           const tokenList = await response.json();
           const networkTokens =
             tokenList.tokens?.filter(
-              (token: any) => token.chainId === CHAIN_IDS[network],
+              (token: { chainId: number }) => token.chainId === CHAIN_IDS[network],
             ) || [];
 
           // Check balance for popular tokens (top 20)
@@ -510,8 +603,8 @@ export class RealPortfolioAPI {
    */
   private static async batchCheckBalances(
     address: string,
-    tokenList: any[],
-    network: "ethereum" | "polygon" | "base",
+    tokenList: { address: string; symbol: string; name: string; decimals: number }[],
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const provider = this.providers[network];
@@ -555,7 +648,7 @@ export class RealPortfolioAPI {
               };
             }
           }
-        } catch (error) {
+        } catch {
           // Silently skip failed tokens to avoid noise
           return null;
         }
@@ -586,7 +679,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchCommonTokenBalances(
     address: string,
-    network: "ethereum" | "polygon" | "base" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const networkTokens = COMMON_TOKENS[network] || {};
@@ -719,7 +812,7 @@ export class RealPortfolioAPI {
    */
   private static async getTokenPriceByAddress(
     address: string,
-    network: "ethereum" | "polygon" | "base" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
   ): Promise<TokenPrice | null> {
     // Check cache first
     const cacheKey = `tokenprice:${network}:${address.toLowerCase()}`;
@@ -734,6 +827,18 @@ export class RealPortfolioAPI {
           break;
         case "base":
           platformId = "base";
+          break;
+        case "arbitrum":
+          platformId = "arbitrum-one";
+          break;
+        case "optimism":
+          platformId = "optimistic-ethereum";
+          break;
+        case "bsc":
+          platformId = "binance-smart-chain";
+          break;
+        case "avalanche":
+          platformId = "avalanche";
           break;
         default:
           platformId = "ethereum";
