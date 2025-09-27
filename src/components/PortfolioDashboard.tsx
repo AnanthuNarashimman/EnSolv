@@ -32,16 +32,42 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
   const { summary, tokenHoldings, liquidityPositions } = portfolioData;
 
   // Prepare data for network distribution pie chart
-  const networkData = [
-    { name: "Polygon", value: summary.networkTotals.polygon, color: "#8247e5" },
-    {
-      name: "Rootstock",
-      value: summary.networkTotals.rootstock,
-      color: "#ff6b35",
-    },
-  ].filter((item) => item.value > 0);
+  const networkColors: Record<string, string> = {
+    ethereum: '#627eea',
+    polygon: '#8247e5', 
+    base: '#0052ff',
+    arbitrum: '#28a0f0',
+    optimism: '#ff0420',
+    bsc: '#f3ba2f',
+    avalanche: '#e84142',
+    rootstock: '#ff6b35',
+    solana: '#9945ff',
+    fantom: '#1969ff',
+    linea: '#61dfff'
+  };
+  
+  const networkData = Object.entries(summary.networkTotals)
+    .filter(([, value]) => value && value > 0)
+    .map(([network, value]) => ({
+      name: network.charAt(0).toUpperCase() + network.slice(1),
+      value: value!,
+      color: networkColors[network] || '#8884d8'
+    }));
 
   // Prepare data for token holdings bar chart (top 10 tokens)
+  const networkAbbreviations: Record<string, string> = {
+    ethereum: 'ETH',
+    polygon: 'POLY',
+    base: 'BASE',
+    arbitrum: 'ARB',
+    optimism: 'OP',
+    bsc: 'BSC',
+    avalanche: 'AVAX',
+    solana: 'SOL',
+    fantom: 'FTM',
+    linea: 'LINEA'
+  };
+
   const topTokens = [...tokenHoldings]
     .sort((a, b) => b.usdValue - a.usdValue)
     .slice(0, 10)
@@ -49,7 +75,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
       ...token,
       displayName: token.network === 'ethereum' 
         ? token.symbol 
-        : `${token.symbol} (${token.network.charAt(0).toUpperCase() + token.network.slice(1)})`
+        : `${token.symbol} (${networkAbbreviations[token.network] || token.network.toUpperCase()})`
     }));
 
   const formatCurrency = (value: number): string => {
@@ -61,12 +87,25 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
     }).format(value);
   };
 
-  const formatNumber = (value: string, decimals: number): string => {
-    const num = parseFloat(value) / Math.pow(10, decimals);
-    return num.toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 6,
-    });
+  const formatNumber = (value: string): string => {
+    try {
+      // The balance is already in human-readable format, not in wei
+      const num = parseFloat(value);
+      
+      // If the balance is 0 or invalid, return "0"
+      if (!num || num === 0) {
+        return "0";
+      }
+      
+      // Format the human-readable balance
+      return num.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: num < 1 ? 6 : 4,
+      });
+    } catch (error) {
+      console.error("Error formatting balance:", value, error);
+      return "0";
+    }
   };
 
   return (
@@ -110,17 +149,15 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
         <div style={styles.chartCard}>
           <h3 style={styles.sectionTitle}>Network Distribution</h3>
           <div style={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <PieChart>
                 <Pie
                   data={networkData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: { name?: string; percent?: number }) =>
-                    `${props.name || ''}: ${((props.percent || 0) * 100).toFixed(1)}%`
-                  }
-                  outerRadius={80}
+                  label={false}
+                  outerRadius={90}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -129,28 +166,45 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value) => [
+                  formatter={(value, name) => [
                     formatCurrency(value as number),
-                    "Value",
+                    name,
                   ]}
+                  labelFormatter={(label) => `${label}`}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={50}
+                  formatter={(value, entry) => {
+                    const percentage = ((entry.payload?.value || 0) / summary.totalUsdValue * 100).toFixed(1);
+                    return (
+                      <span style={{ color: entry.color || '#000', fontSize: '12px', marginRight: '15px' }}>
+                        {value}: {percentage}%
+                      </span>
+                    );
+                  }}
+                  wrapperStyle={{
+                    paddingTop: '20px',
+                    fontSize: '12px'
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div style={styles.networkBreakdown}>
-            {Object.entries(summary.networkTotals).map(
-              ([network, value]) =>
-                (value && value > 0) && (
-                  <div key={network} style={styles.networkItem}>
-                    <span style={styles.networkName}>
-                      {network.charAt(0).toUpperCase() + network.slice(1)}
-                    </span>
-                    <span style={styles.networkValue}>
-                      {formatCurrency(value)}
-                    </span>
-                  </div>
-                ),
-            )}
+            {Object.entries(summary.networkTotals)
+              .filter(([, value]) => value != null && value > 0)
+              .map(([network, value]) => (
+                <div key={network} style={styles.networkItem}>
+                  <span style={styles.networkName}>
+                    {network.charAt(0).toUpperCase() + network.slice(1)}
+                  </span>
+                  <span style={styles.networkValue}>
+                    {formatCurrency(value!)}
+                  </span>
+                </div>
+              ))
+            }
           </div>
         </div>
       )}
@@ -160,13 +214,20 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
         <div style={styles.chartCard}>
           <h3 style={styles.sectionTitle}>Top Token Holdings</h3>
           <div style={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={350}>
               <BarChart
                 data={topTokens}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 45 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="displayName" />
+                <XAxis 
+                  dataKey="displayName" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={0}
+                  fontSize={11}
+                />
                 <YAxis
                   tickFormatter={(value) => `$${value.toLocaleString()}`}
                 />
@@ -220,7 +281,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
                       <span style={styles.networkTag}>{token.network}</span>
                     </td>
                     <td style={styles.tableCell}>
-                      {formatNumber(token.balance, token.decimals)}
+                      {formatNumber(token.balance)}
                     </td>
                     <td style={styles.tableCell}>
                       {formatCurrency(token.usdValue)}
@@ -291,10 +352,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "20px",
   },
   header: {
-    display: "flex",
-    justifyContent: "space-between",
+    display: "flex",  
+    justifyContent: "center",
     alignItems: "center",
     marginBottom: "30px",
+    flexDirection: "column",
+    gap: "15px",
   },
   title: {
     fontSize: "1.75rem",
@@ -302,6 +365,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontWeight: 800,
     letterSpacing: "0.2px",
+    textAlign: "center",
   },
   refreshButton: {
     padding: "10px 20px",
@@ -328,6 +392,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "20px",
     marginTop: 0,
     fontWeight: 700,
+    textAlign: "center",
   },
   summaryGrid: {
     display: "grid",

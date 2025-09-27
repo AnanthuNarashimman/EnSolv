@@ -14,9 +14,13 @@ const ARBITRUM_RPC =
 const OPTIMISM_RPC =
   import.meta.env.VITE_OPTIMISM_RPC_URL || "https://mainnet.optimism.io";
 const BSC_RPC =
-  import.meta.env.VITE_BSC_RPC_URL || "https://bsc-dataseed1.binance.org";
+  import.meta.env.VITE_BSC_RPC_URL || "https://bsc-dataseed.bnbchain.org";
 const AVALANCHE_RPC =
   import.meta.env.VITE_AVALANCHE_RPC_URL || "https://api.avax.network/ext/bc/C/rpc";
+const FANTOM_RPC =
+  import.meta.env.VITE_FANTOM_RPC_URL || "https://rpc.ftm.tools";
+const LINEA_RPC =
+  import.meta.env.VITE_LINEA_RPC_URL || "https://rpc.linea.build";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -38,6 +42,9 @@ const CHAIN_IDS = {
   base: 8453,
   bsc: 56,
   avalanche: 43114,
+  solana: 101, // Solana mainnet
+  fantom: 250,
+  linea: 59144,
 };
 
 // Token list for common tokens (fallback if API fails)
@@ -99,6 +106,33 @@ const COMMON_TOKENS: {
       decimals: 18,
     },
   },
+  bsc: {
+    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c": {
+      symbol: "WBNB",
+      name: "Wrapped BNB",
+      decimals: 18,
+    },
+    "0x55d398326f99059fF775485246999027B3197955": {
+      symbol: "USDT",
+      name: "Tether USD",
+      decimals: 18,
+    },
+    "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": {
+      symbol: "USDC",
+      name: "USD Coin",
+      decimals: 18,
+    },
+    "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3": {
+      symbol: "DAI",
+      name: "Dai Stablecoin",
+      decimals: 18,
+    },
+    "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c": {
+      symbol: "BTCB",
+      name: "Bitcoin BEP2",
+      decimals: 18,
+    },
+  },
 };
 
 // ERC20 ABI (minimal)
@@ -129,6 +163,9 @@ export class RealPortfolioAPI {
     optimism: new ethers.JsonRpcProvider(OPTIMISM_RPC),
     bsc: new ethers.JsonRpcProvider(BSC_RPC),
     avalanche: new ethers.JsonRpcProvider(AVALANCHE_RPC),
+    fantom: new ethers.JsonRpcProvider(FANTOM_RPC),
+    linea: new ethers.JsonRpcProvider(LINEA_RPC),
+    // Note: Solana uses different RPC format, will handle separately
   };
 
   private static nativeTokens = {
@@ -173,6 +210,24 @@ export class RealPortfolioAPI {
       name: "Avalanche",
       decimals: 18,
       coingeckoId: "avalanche-2",
+    },
+    solana: {
+      symbol: "SOL",
+      name: "Solana",
+      decimals: 9,
+      coingeckoId: "solana",
+    },
+    fantom: {
+      symbol: "FTM",
+      name: "Fantom",
+      decimals: 18,
+      coingeckoId: "fantom",
+    },
+    linea: {
+      symbol: "ETH",
+      name: "Linea ETH",
+      decimals: 18,
+      coingeckoId: "ethereum",
     },
   };
 
@@ -270,7 +325,7 @@ export class RealPortfolioAPI {
       console.log("🔍 Fetching real portfolio for:", address);
 
       // Fetch data from multiple chains in parallel
-      const [ethereumData, polygonData, baseData, arbitrumData, optimismData, bscData, avalancheData] = await Promise.allSettled([
+      const [ethereumData, polygonData, baseData, arbitrumData, optimismData, bscData, avalancheData, fantomData, lineaData, solanaData] = await Promise.allSettled([
         this.fetchChainData(address, "ethereum"),
         this.fetchChainData(address, "polygon"),
         this.fetchChainData(address, "base"),
@@ -278,11 +333,26 @@ export class RealPortfolioAPI {
         this.fetchChainData(address, "optimism"),
         this.fetchChainData(address, "bsc"),
         this.fetchChainData(address, "avalanche"),
+        this.fetchChainData(address, "fantom"),
+        this.fetchChainData(address, "linea"),
+        this.fetchSolanaData(address),
       ]);
 
       // Process results
       const allTokens: TokenHolding[] = [];
-      const networkTotals = { ethereum: 0, polygon: 0, rootstock: 0, base: 0, arbitrum: 0, optimism: 0, bsc: 0, avalanche: 0 };
+      const networkTotals = { 
+        ethereum: 0, 
+        polygon: 0, 
+        rootstock: 0, 
+        base: 0, 
+        arbitrum: 0, 
+        optimism: 0, 
+        bsc: 0, 
+        avalanche: 0,
+        solana: 0,
+        fantom: 0,
+        linea: 0
+      };
 
       if (ethereumData.status === "fulfilled" && ethereumData.value) {
         allTokens.push(...ethereumData.value);
@@ -329,11 +399,15 @@ export class RealPortfolioAPI {
       }
 
       if (bscData.status === "fulfilled" && bscData.value) {
+        console.log("✅ BSC data received:", bscData.value);
         allTokens.push(...bscData.value);
         networkTotals.bsc = bscData.value.reduce(
           (sum, token) => sum + token.usdValue,
           0,
         );
+        console.log("💰 BSC network total:", networkTotals.bsc);
+      } else {
+        console.log("❌ BSC data failed:", bscData.status === "rejected" ? bscData.reason : "No data");
       }
 
       if (avalancheData.status === "fulfilled" && avalancheData.value) {
@@ -342,6 +416,42 @@ export class RealPortfolioAPI {
           (sum, token) => sum + token.usdValue,
           0,
         );
+      }
+
+      if (fantomData.status === "fulfilled" && fantomData.value) {
+        console.log("✅ Fantom data received:", fantomData.value);
+        allTokens.push(...fantomData.value);
+        networkTotals.fantom = fantomData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+        console.log("💰 Fantom network total:", networkTotals.fantom);
+      } else {
+        console.log("❌ Fantom data failed:", fantomData.status === "rejected" ? fantomData.reason : "No data");
+      }
+
+      if (lineaData.status === "fulfilled" && lineaData.value) {
+        console.log("✅ Linea data received:", lineaData.value);
+        allTokens.push(...lineaData.value);
+        networkTotals.linea = lineaData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+        console.log("💰 Linea network total:", networkTotals.linea);
+      } else {
+        console.log("❌ Linea data failed:", lineaData.status === "rejected" ? lineaData.reason : "No data");
+      }
+
+      if (solanaData.status === "fulfilled" && solanaData.value) {
+        console.log("✅ Solana data received:", solanaData.value);
+        allTokens.push(...solanaData.value);
+        networkTotals.solana = solanaData.value.reduce(
+          (sum: number, token: TokenHolding) => sum + token.usdValue,
+          0,
+        );
+        console.log("💰 Solana network total:", networkTotals.solana);
+      } else {
+        console.log("❌ Solana data failed:", solanaData.status === "rejected" ? solanaData.reason : "No data");
       }
 
       // Sort by USD value
@@ -389,7 +499,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchChainData(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
   ): Promise<TokenHolding[]> {
     console.log(`🔗 Fetching ${network} data for:`, address);
     try {
@@ -428,12 +538,14 @@ export class RealPortfolioAPI {
 
       for (const method of discoveryMethods) {
         try {
+          console.log(`🔍 Trying discovery method for ${network}...`);
           tokenBalances = await this.withRetry(method);
+          console.log(`✅ Discovery method worked for ${network}, found ${tokenBalances.length} tokens`);
           tokens.push(...tokenBalances);
           break; // Success, no need to try other methods
         } catch (error) {
           lastError = error as Error;
-          console.log(`Token discovery method failed for ${network}:`, error);
+          console.log(`❌ Token discovery method failed for ${network}:`, error);
           await this.sleep(RATE_LIMIT_DELAY);
         }
       }
@@ -441,14 +553,39 @@ export class RealPortfolioAPI {
       // If all methods failed but we have some tokens, continue
       if (tokens.length === 0 && lastError) {
         console.warn(
-          `All token discovery methods failed for ${network}:`,
+          `⚠️ All token discovery methods failed for ${network}:`,
           lastError,
         );
       }
 
-      return tokens.filter((token) => token.usdValue > 0.01); // Filter dust
+      const filteredTokens = tokens.filter((token) => token.usdValue > 0.01); // Filter dust
+      console.log(`📊 ${network} final result: ${filteredTokens.length} tokens, total value: $${filteredTokens.reduce((sum, t) => sum + t.usdValue, 0).toFixed(2)}`);
+      return filteredTokens;
     } catch (error) {
-      console.error(`Error fetching ${network} data:`, error);
+      console.error(`❌ Critical error fetching ${network} data:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch Solana data for a wallet address
+   * Note: This is a placeholder implementation since Solana uses different address format and APIs
+   */
+  private static async fetchSolanaData(address: string): Promise<TokenHolding[]> {
+    console.log(`🔗 Fetching Solana data for:`, address);
+    
+    try {
+      // For now, return empty array since Solana requires different address format (base58 vs hex)
+      // In a full implementation, we would:
+      // 1. Check if the address is a valid Solana address (base58)
+      // 2. Use Solana Web3.js or similar library
+      // 3. Fetch SOL balance and SPL token balances
+      // 4. Get token prices from CoinGecko or similar
+      
+      console.log("ℹ️ Solana integration requires base58 addresses - skipping for Ethereum addresses");
+      return [];
+    } catch (error) {
+      console.error("Error fetching Solana data:", error);
       return [];
     }
   }
@@ -458,14 +595,17 @@ export class RealPortfolioAPI {
    */
   private static async getNativeBalance(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
   ): Promise<number> {
     try {
+      console.log(`🔍 Checking ${network} native balance for:`, address);
       const provider = this.providers[network];
       const balance = await provider.getBalance(address);
-      return parseFloat(ethers.formatEther(balance));
+      const formatted = parseFloat(ethers.formatEther(balance));
+      console.log(`💰 ${network} native balance:`, formatted);
+      return formatted;
     } catch (error) {
-      console.error(`Error fetching ${network} balance:`, error);
+      console.error(`❌ Error fetching ${network} balance:`, error);
       return 0;
     }
   }
@@ -475,7 +615,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchTokenBalancesCovalent(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea" = "ethereum",
   ): Promise<TokenHolding[]> {
     try {
       const chainId = CHAIN_IDS[network];
@@ -532,7 +672,7 @@ export class RealPortfolioAPI {
    */
   private static async discoverTokensAdvanced(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
 
@@ -560,6 +700,12 @@ export class RealPortfolioAPI {
         ],
         avalanche: [
           "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/joe.tokenlist.json",
+        ],
+        fantom: [
+          "https://raw.githubusercontent.com/SpookySwap/spooky-info/master/src/constants/token/spookyswap.json",
+        ],
+        linea: [
+          "https://tokens.uniswap.org", // Uniswap supports Linea
         ],
       };
 
@@ -604,7 +750,7 @@ export class RealPortfolioAPI {
   private static async batchCheckBalances(
     address: string,
     tokenList: { address: string; symbol: string; name: string; decimals: number }[],
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const provider = this.providers[network];
@@ -679,7 +825,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchCommonTokenBalances(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea" = "ethereum",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const networkTokens = COMMON_TOKENS[network] || {};
@@ -812,7 +958,7 @@ export class RealPortfolioAPI {
    */
   private static async getTokenPriceByAddress(
     address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" = "ethereum",
+    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea" = "ethereum",
   ): Promise<TokenPrice | null> {
     // Check cache first
     const cacheKey = `tokenprice:${network}:${address.toLowerCase()}`;

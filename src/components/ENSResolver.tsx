@@ -102,14 +102,6 @@ const ENSResolver = () => {
     }
   };
 
-  const handleBackToResolver = () => {
-    setCurrentView("resolver");
-    setEnsName("");
-    setResolvedAddress(null);
-    setPortfolioData(null);
-    setError(null);
-  };
-
   const handleUseConnectedWallet = useCallback(async () => {
     console.log("🔗 Using connected wallet:", connectedAddress);
     if (connectedAddress) {
@@ -227,15 +219,15 @@ const ENSResolver = () => {
               {/* Statistics Section */}
               <div style={styles.statsContainer} className="stats-container">
                 <div style={styles.statCard}>
-                  <div style={styles.statNumber}>$2.5B+</div>
+                  <div style={styles.statNumber}>$22.5M+</div>
                   <div style={styles.statLabel}>Total Value Tracked</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statNumber}>50K+</div>
+                  <div style={styles.statNumber}>250+</div>
                   <div style={styles.statLabel}>Portfolios Analyzed</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statNumber}>15+</div>
+                  <div style={styles.statNumber}>10+</div>
                   <div style={styles.statLabel}>Networks Supported</div>
                 </div>
                 <div style={styles.statCard}>
@@ -294,7 +286,7 @@ const ENSResolver = () => {
                   Get Started Now →
                 </button>
                 <p style={styles.ctaSubtext}>
-                  No wallet connection required • Free to use • Real-time data
+                  Free to use • Real-time data
                 </p>
               </div>
             </div>
@@ -305,10 +297,6 @@ const ENSResolver = () => {
       {currentView === "portfolio" && portfolioData && (
         <>
           <div style={styles.portfolioHeader}>
-            <button onClick={handleBackToResolver} style={styles.backButton}>
-              <span style={styles.backIcon}>←</span>
-              <span>Back</span>
-            </button>
             <div style={styles.addressInfo}>
               <h3 style={styles.addressTitle}>
                 <span style={styles.portfolioIcon}>💼</span>
@@ -444,48 +432,27 @@ const styles: Record<string, React.CSSProperties> = {
   portfolioHeader: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
+    justifyContent: "center",
+    alignSelf: "center",
     marginBottom: "2rem",
-    flexWrap: "wrap",
-    gap: "1rem",
     background: "rgba(255, 255, 255, 0.7)",
     backdropFilter: "blur(20px) saturate(180%)",
     WebkitBackdropFilter: "blur(20px) saturate(180%)",
     border: "1px solid rgba(255, 255, 255, 0.5)",
     borderRadius: "20px",
-    padding: "20px 24px",
+    padding: "16px 24px",
     boxShadow:
       "0 10px 30px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.8) inset",
   },
-  backButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "10px 16px",
-    background: "rgba(130, 71, 229, 0.08)",
-    color: "#8247e5",
-    border: "1px solid rgba(130, 71, 229, 0.2)",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: 600,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  },
-  backIcon: {
-    fontSize: "18px",
-    transition: "transform 0.3s ease",
-  },
   addressInfo: {
-    textAlign: "right",
-    flex: 1,
+    textAlign: "center",
   },
   addressTitle: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     gap: "10px",
-    margin: "0 0 8px 0",
+    margin: "0 0 6px 0",
     fontSize: "1.375rem",
     fontWeight: 800,
     background: "linear-gradient(135deg, #8247e5 0%, #6b34d1 100%)",

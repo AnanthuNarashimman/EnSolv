@@ -30,6 +30,11 @@ export interface NetworkTotals {
   arbitrum?: number;
   optimism?: number;
   base?: number;
+  bsc?: number;
+  avalanche?: number;
+  solana?: number;
+  fantom?: number;
+  linea?: number;
   [key: string]: number | undefined;
 }
 
