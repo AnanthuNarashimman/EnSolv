@@ -22,16 +22,16 @@ const FANTOM_RPC =
 const LINEA_RPC =
   import.meta.env.VITE_LINEA_RPC_URL || "https://rpc.linea.build";
 
-// Cache configuration
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const PRICE_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for prices
+// Cache configuration - Optimized for faster responses
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (longer cache)
+const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for prices (longer cache)
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const priceCache = new Map<string, { data: TokenPrice; timestamp: number }>();
 
-// Rate limiting
-const RATE_LIMIT_DELAY = 200; // ms between requests
-const MAX_RETRIES = 3;
-const BATCH_SIZE = 50; // tokens per batch
+// Rate limiting - Optimized for speed
+const RATE_LIMIT_DELAY = 50; // Reduced from 200ms to 50ms
+const MAX_RETRIES = 2; // Reduced from 3 to 2 retries
+const REQUEST_TIMEOUT = 5000; // 5 second timeout per request
 
 // Chain IDs
 const CHAIN_IDS = {
@@ -261,6 +261,18 @@ export class RealPortfolioAPI {
   }
 
   /**
+   * Timeout wrapper for API requests
+   */
+  private static withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => 
+        setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ]);
+  }
+
+  /**
    * Sleep utility for rate limiting
    */
   private static sleep(ms: number): Promise<void> {
@@ -324,19 +336,48 @@ export class RealPortfolioAPI {
 
       console.log("🔍 Fetching real portfolio for:", address);
 
-      // Fetch data from multiple chains in parallel
-      const [ethereumData, polygonData, baseData, arbitrumData, optimismData, bscData, avalancheData, fantomData, lineaData, solanaData] = await Promise.allSettled([
+      // Prioritize major networks first for faster response
+      // Fetch high-value networks first, then expand if needed
+      const priorityNetworks = [
         this.fetchChainData(address, "ethereum"),
-        this.fetchChainData(address, "polygon"),
-        this.fetchChainData(address, "base"),
+        this.fetchChainData(address, "polygon"), 
         this.fetchChainData(address, "arbitrum"),
         this.fetchChainData(address, "optimism"),
+        this.fetchChainData(address, "base"),
+      ];
+
+      const secondaryNetworks = [
         this.fetchChainData(address, "bsc"),
         this.fetchChainData(address, "avalanche"),
         this.fetchChainData(address, "fantom"),
         this.fetchChainData(address, "linea"),
         this.fetchSolanaData(address),
-      ]);
+      ];
+
+      // Fetch priority networks first with shorter timeout
+      console.log("🚀 Fetching priority networks...");
+      const priorityResults = await Promise.allSettled(
+        priorityNetworks.map(p => this.withTimeout(p, REQUEST_TIMEOUT))
+      );
+
+      // Start secondary networks but don't wait as long
+      console.log("🔄 Fetching secondary networks...");
+      const secondaryPromise = Promise.allSettled(
+        secondaryNetworks.map(p => this.withTimeout(p, REQUEST_TIMEOUT / 2))
+      );
+
+      // Process priority results immediately
+      const [ethereumData, polygonData, arbitrumData, optimismData, baseData] = priorityResults;
+
+      // Wait for secondary results with timeout
+      const secondaryResults = await Promise.race([
+        secondaryPromise,
+        new Promise(resolve => setTimeout(() => resolve([]), REQUEST_TIMEOUT / 2))
+      ]) as PromiseSettledResult<TokenHolding[]>[];
+
+      const [bscData, avalancheData, fantomData, lineaData, solanaData] = secondaryResults.length >= 5 
+        ? secondaryResults 
+        : [{status: 'rejected' as const}, {status: 'rejected' as const}, {status: 'rejected' as const}, {status: 'rejected' as const}, {status: 'rejected' as const}];
 
       // Process results
       const allTokens: TokenHolding[] = [];
@@ -487,6 +528,15 @@ export class RealPortfolioAPI {
       // Cache the result
       this.setCache(cacheKey, portfolioData);
 
+      const responseTime = Date.now() - startTime;
+      console.log(`🚀 Portfolio fetch completed in ${responseTime}ms (target: <10s)`);
+      
+      // Update response time in metadata
+      portfolioData.metadata = {
+        ...portfolioData.metadata,
+        responseTime: `${responseTime}ms`,
+      };
+
       return portfolioData;
     } catch (error) {
       console.error("Portfolio fetch error:", error);
@@ -495,7 +545,7 @@ export class RealPortfolioAPI {
   }
 
   /**
-   * Fetch token data for a specific chain
+   * Fetch token data for a specific chain - Optimized for speed
    */
   private static async fetchChainData(
     address: string,
@@ -504,13 +554,32 @@ export class RealPortfolioAPI {
     console.log(`🔗 Fetching ${network} data for:`, address);
     try {
       const tokens: TokenHolding[] = [];
+      const startTime = Date.now();
 
-      // Get native token balance
-      const nativeBalance = await this.getNativeBalance(address, network);
+      // Get native token balance with timeout
+      const nativeBalance = await this.withTimeout(
+        this.getNativeBalance(address, network), 
+        REQUEST_TIMEOUT
+      );
       console.log(`💰 ${network} native balance:`, nativeBalance);
+      
       if (nativeBalance > 0) {
         const nativeInfo = this.nativeTokens[network];
-        const price = await this.getTokenPrice(nativeInfo.coingeckoId);
+        // Get price from cache first, skip if not cached for speed
+        const cacheKey = `coinprice:${nativeInfo.coingeckoId}`;
+        let price = this.getPriceFromCache(cacheKey);
+        
+        if (!price) {
+          try {
+            price = await this.withTimeout(
+              this.getTokenPrice(nativeInfo.coingeckoId),
+              REQUEST_TIMEOUT / 2 // Shorter timeout for price
+            );
+          } catch {
+            price = { usd: 0, usd_24h_change: 0 }; // Fallback price
+          }
+        }
+        
         console.log(`💲 ${network} price:`, price);
 
         tokens.push({
@@ -526,40 +595,31 @@ export class RealPortfolioAPI {
         });
       }
 
-      // Try multiple discovery methods
+      // Try discovery methods with faster timeout and fewer retries
       const discoveryMethods = [
-        () => this.fetchTokenBalancesCovalent(address, network),
-        () => this.discoverTokensAdvanced(address, network),
-        () => this.fetchCommonTokenBalances(address, network),
+        () => this.withTimeout(this.fetchTokenBalancesCovalent(address, network), REQUEST_TIMEOUT),
+        () => this.withTimeout(this.fetchCommonTokenBalances(address, network), REQUEST_TIMEOUT / 2),
       ];
 
       let tokenBalances: TokenHolding[] = [];
-      let lastError: Error | null = null;
-
+      
+      // Try only the first method for speed, skip advanced discovery
       for (const method of discoveryMethods) {
         try {
           console.log(`🔍 Trying discovery method for ${network}...`);
-          tokenBalances = await this.withRetry(method);
+          tokenBalances = await method(); // No retry wrapper for speed
           console.log(`✅ Discovery method worked for ${network}, found ${tokenBalances.length} tokens`);
           tokens.push(...tokenBalances);
           break; // Success, no need to try other methods
         } catch (error) {
-          lastError = error as Error;
           console.log(`❌ Token discovery method failed for ${network}:`, error);
-          await this.sleep(RATE_LIMIT_DELAY);
+          // Continue to next method without delay for speed
         }
       }
 
-      // If all methods failed but we have some tokens, continue
-      if (tokens.length === 0 && lastError) {
-        console.warn(
-          `⚠️ All token discovery methods failed for ${network}:`,
-          lastError,
-        );
-      }
-
       const filteredTokens = tokens.filter((token) => token.usdValue > 0.01); // Filter dust
-      console.log(`📊 ${network} final result: ${filteredTokens.length} tokens, total value: $${filteredTokens.reduce((sum, t) => sum + t.usdValue, 0).toFixed(2)}`);
+      const elapsed = Date.now() - startTime;
+      console.log(`📊 ${network} completed in ${elapsed}ms: ${filteredTokens.length} tokens, total value: $${filteredTokens.reduce((sum, t) => sum + t.usdValue, 0).toFixed(2)}`);
       return filteredTokens;
     } catch (error) {
       console.error(`❌ Critical error fetching ${network} data:`, error);
@@ -665,159 +725,6 @@ export class RealPortfolioAPI {
       console.error("Covalent API error:", error);
       throw error;
     }
-  }
-
-  /**
-   * Advanced token discovery using multiple sources
-   */
-  private static async discoverTokensAdvanced(
-    address: string,
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
-  ): Promise<TokenHolding[]> {
-    const tokens: TokenHolding[] = [];
-
-    try {
-      // Try popular token lists
-      const tokenListUrls = {
-        ethereum: [
-          "https://tokens.uniswap.org",
-          "https://raw.githubusercontent.com/compound-finance/token-list/master/compound.tokenlist.json",
-        ],
-        polygon: [
-          "https://unpkg.com/quickswap-default-token-list@1.2.20/build/quickswap-default.tokenlist.json",
-        ],
-        base: [
-          "https://tokens.uniswap.org", // Uniswap supports Base
-        ],
-        arbitrum: [
-          "https://tokens.uniswap.org", // Uniswap supports Arbitrum
-        ],
-        optimism: [
-          "https://tokens.uniswap.org", // Uniswap supports Optimism
-        ],
-        bsc: [
-          "https://tokens.pancakeswap.finance/pancakeswap-extended.json",
-        ],
-        avalanche: [
-          "https://raw.githubusercontent.com/traderjoe-xyz/joe-tokenlists/main/joe.tokenlist.json",
-        ],
-        fantom: [
-          "https://raw.githubusercontent.com/SpookySwap/spooky-info/master/src/constants/token/spookyswap.json",
-        ],
-        linea: [
-          "https://tokens.uniswap.org", // Uniswap supports Linea
-        ],
-      };
-
-      const urls = tokenListUrls[network] || [];
-
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          if (!response.ok) continue;
-
-          const tokenList = await response.json();
-          const networkTokens =
-            tokenList.tokens?.filter(
-              (token: { chainId: number }) => token.chainId === CHAIN_IDS[network],
-            ) || [];
-
-          // Check balance for popular tokens (top 20)
-          const popularTokens = networkTokens.slice(0, 20);
-          const balanceChecks = await this.batchCheckBalances(
-            address,
-            popularTokens,
-            network,
-          );
-
-          tokens.push(...balanceChecks);
-
-          if (tokens.length > 0) break; // Found tokens, no need to check other lists
-        } catch (error) {
-          console.log(`Failed to fetch token list from ${url}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error("Advanced token discovery failed:", error);
-    }
-
-    return tokens.sort((a, b) => b.usdValue - a.usdValue);
-  }
-
-  /**
-   * Batch check balances for multiple tokens
-   */
-  private static async batchCheckBalances(
-    address: string,
-    tokenList: { address: string; symbol: string; name: string; decimals: number }[],
-    network: "ethereum" | "polygon" | "base" | "arbitrum" | "optimism" | "bsc" | "avalanche" | "fantom" | "linea",
-  ): Promise<TokenHolding[]> {
-    const tokens: TokenHolding[] = [];
-    const provider = this.providers[network];
-
-    // Process in batches to avoid overwhelming the RPC
-    for (let i = 0; i < tokenList.length; i += BATCH_SIZE) {
-      const batch = tokenList.slice(i, i + BATCH_SIZE);
-
-      const batchPromises = batch.map(async (tokenInfo) => {
-        try {
-          const contract = new ethers.Contract(
-            tokenInfo.address,
-            ERC20_ABI,
-            provider,
-          );
-          const balance = await contract.balanceOf(address);
-
-          if (balance > 0n) {
-            const formattedBalance = parseFloat(
-              ethers.formatUnits(balance, tokenInfo.decimals),
-            );
-
-            // Get price (with caching)
-            const price = await this.getTokenPriceByAddress(
-              tokenInfo.address,
-              network,
-            );
-            const usdValue = formattedBalance * (price?.usd || 0);
-
-            if (usdValue > 0.01) {
-              return {
-                symbol: tokenInfo.symbol,
-                name: tokenInfo.name,
-                address: tokenInfo.address,
-                network,
-                balance: balance.toString(),
-                decimals: tokenInfo.decimals,
-                usdValue,
-                price: price?.usd || 0,
-                change24h: price?.usd_24h_change || 0,
-              };
-            }
-          }
-        } catch {
-          // Silently skip failed tokens to avoid noise
-          return null;
-        }
-        return null;
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-      const validTokens: TokenHolding[] = [];
-      batchResults.forEach(result => {
-        if (result.status === 'fulfilled' && result.value !== null) {
-          validTokens.push(result.value);
-        }
-      });
-
-      tokens.push(...validTokens);
-
-      // Rate limiting between batches
-      if (i + BATCH_SIZE < tokenList.length) {
-        await this.sleep(RATE_LIMIT_DELAY);
-      }
-    }
-
-    return tokens;
   }
 
   /**

@@ -16,7 +16,7 @@ import type { PortfolioData, TokenHolding } from "../types/portfolio";
 
 interface PortfolioDashboardProps {
   portfolioData: PortfolioData;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   isLoading: boolean;
 }
 
@@ -112,13 +112,15 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({
     <div style={styles.container} className="container">
       <div style={styles.header}>
         <h2 style={styles.title}>Portfolio Dashboard</h2>
-        <button
-          onClick={onRefresh}
-          style={styles.refreshButton}
-          disabled={isLoading}
-        >
-          {isLoading ? "Refreshing..." : "Refresh"}
-        </button>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            style={styles.refreshButton}
+            disabled={isLoading}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        )}
       </div>
 
       {/* Portfolio Summary */}

@@ -17,6 +17,15 @@ import { useWalletContext } from "../contexts/WalletContext";
  *  - @ensdomains/ensjs is used as a fallback to demonstrate usage of the library as required by the task
  */
 const ENSResolver = () => {
+  // Example ENS names for users to try
+  const exampleNames = [
+    "vitalik.eth",
+    "austingriffith.eth",
+    "nick.eth", 
+    "coopahtroopa.eth",
+    "dennison.eth",
+  ];
+  
   const [ensName, setEnsName] = useState("");
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(
@@ -28,6 +37,7 @@ const ENSResolver = () => {
   const [currentView, setCurrentView] = useState<"resolver" | "portfolio">(
     "resolver",
   );
+  const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const { address: connectedAddress, isConnected } = useWalletContext();
 
   const rpcUrl = import.meta.env.VITE_ETHEREUM_RPC_URL as string | undefined;
@@ -119,6 +129,15 @@ const ENSResolver = () => {
     }
   }, [isConnected, connectedAddress, portfolioData, currentView, handleUseConnectedWallet]);
 
+  // Rotate example placeholder every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentExampleIndex((prev) => (prev + 1) % exampleNames.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [exampleNames.length]);
+
   return (
     <div style={styles.container}>
       {currentView === "resolver" && (
@@ -136,7 +155,7 @@ const ENSResolver = () => {
             <div style={styles.formRow}>
               <input
                 type="text"
-                placeholder="vitalik.eth"
+                placeholder={`Try: ${exampleNames[currentExampleIndex]} or enter any ENS name`}
                 value={ensName}
                 onChange={(e) => setEnsName(e.target.value)}
                 style={styles.input}
@@ -151,6 +170,29 @@ const ENSResolver = () => {
               >
                 {loading ? "Resolving..." : "Resolve"}
               </button>
+            </div>
+
+            {/* ENS Examples */}
+            <div style={styles.examplesSection}>
+              <p style={styles.examplesLabel}>Popular ENS names to try:</p>
+              <div style={styles.examplesGrid}>
+                {exampleNames.map((example, index) => (
+                  <button
+                    key={example}
+                    onClick={() => {
+                      setEnsName(example);
+                      setCurrentExampleIndex(index);
+                    }}
+                    style={{
+                      ...styles.exampleChip,
+                      ...(ensName === example ? styles.exampleChipActive : {}),
+                    }}
+                    disabled={loading || portfolioLoading}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {isConnected && (
@@ -641,6 +683,42 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "12px",
     fontWeight: 600,
     letterSpacing: "0.3px",
+  },
+  examplesSection: {
+    marginTop: "20px",
+    textAlign: "center" as const,
+  },
+  examplesLabel: {
+    margin: "0 0 12px 0",
+    fontSize: "13px",
+    color: "#6b7280",
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+  },
+  examplesGrid: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: "8px",
+    justifyContent: "center",
+  },
+  exampleChip: {
+    padding: "6px 12px",
+    fontSize: "13px",
+    fontWeight: 500,
+    background: "rgba(130, 71, 229, 0.08)",
+    color: "#8247e5",
+    border: "1px solid rgba(130, 71, 229, 0.2)",
+    borderRadius: "20px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    fontFamily: "var(--font-mono)",
+  },
+  exampleChipActive: {
+    background: "#8247e5",
+    color: "white",
+    borderColor: "#8247e5",
+    transform: "scale(1.05)",
   },
 };
 
