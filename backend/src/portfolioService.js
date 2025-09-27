@@ -357,7 +357,7 @@ export async function getPortfolioData(address) {
     const cached = getCache(address);
     if (cached) {
       console.log(`Cache hit for address: ${address}`);
-      return cached;
+      return { ...cached, cached: true };
     }
 
     console.log(`Fetching portfolio data for address: ${address}`);
@@ -481,6 +481,7 @@ export async function getPortfolioData(address) {
     const portfolio = {
       address: address,
       updatedAt: new Date().toISOString(),
+      cached: false,
       summary: {
         totalUsdValue: totalPortfolioValue,
         networkTotals: {

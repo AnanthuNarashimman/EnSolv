@@ -103,7 +103,7 @@ app.get('/portfolio', async (req, res) => {
       ...portfolioData,
       metadata: {
         responseTime: `${responseTime}ms`,
-        cached: portfolioData.cached || false,
+        cached: portfolioData.cached,
         apiVersion: '1.0.0'
       }
     };
