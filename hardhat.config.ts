@@ -7,12 +7,12 @@ const config: HardhatUserConfig = {
   networks: {
     polygon: {
       type: "http",
-      url: process.env.POLYGON_RPC_URL,
+      url: "${POLYGON_RPC_URL}",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     mumbai: {  // Treat this as Amoy testnet in your config
       type: "http",
-      url: process.env.MUMBAI_RPC_URL,
+      url: "${MUMBAI_RPC_URL}",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 80002,  // Chain ID for Amoy testnet
     },
