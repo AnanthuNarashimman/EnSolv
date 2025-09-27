@@ -1,57 +1,103 @@
-// Token address to Pyth price feed ID mappings
-// These mappings connect token addresses to their corresponding Pyth price feed IDs
+/**
+ * @fileoverview Token mappings and price feed configurations for EnSolv Portfolio API
+ * 
+ * This module contains token address mappings for supported blockchain networks
+ * and their corresponding Pyth Network price feed IDs. It provides utilities
+ * for token identification and price feed lookup across Polygon and Rootstock chains.
+ * 
+ * @author EnSolv Team
+ * @version 1.0.0
+ */
 
+/**
+ * Token mappings for Polygon network
+ * Maps token contract addresses to their metadata including symbols, decimals, and price feed IDs
+ * 
+ * @type {Object.<string, Object>}
+ * @property {string} symbol - Token symbol (e.g., 'USDC', 'WMATIC')
+ * @property {number} decimals - Number of decimal places for the token
+ * @property {string} priceFeedId - Pyth Network price feed ID for USD pricing
+ */
 export const POLYGON_TOKEN_MAPPINGS = {
-  // WETH on Polygon
-  '0x7ceb23fd6c0c6b4e2b8b2d9c5b5c5b5c5b5c5b5c': 'crypto.ETH/USD',
   // USDC on Polygon
-  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': 'crypto.USDC/USD',
-  // USDT on Polygon
-  '0xc2132d05d31c914a87c6611c10748aeb04b58e8f': 'crypto.USDT/USD',
+  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': {
+    symbol: 'USDC',
+    decimals: 6,
+    priceFeedId: 'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a' // USD/USD (stable)
+  },
   // WMATIC on Polygon
-  '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270': 'crypto.MATIC/USD',
-  // WBTC on Polygon
-  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6': 'crypto.BTC/USD',
-  // DAI on Polygon
-  '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063': 'crypto.DAI/USD',
-  // LINK on Polygon
-  '0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39': 'crypto.LINK/USD',
-  // UNI on Polygon
-  '0xb33eaad8d922b1083446dc23f610c2567fb5180f': 'crypto.UNI/USD'
+  '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270': {
+    symbol: 'WMATIC',
+    decimals: 18,
+    priceFeedId: '5de33a9112c2b700b8d30b8a3402c103578ccfa2765696471cc672bd5cf6ac52' // MATIC/USD
+  }
 };
 
+/**
+ * Token mappings for Rootstock network
+ * Maps token contract addresses to their metadata including symbols, decimals, and price feed IDs
+ * 
+ * @type {Object.<string, Object>}
+ * @property {string} symbol - Token symbol (e.g., 'RBTC')
+ * @property {number} decimals - Number of decimal places for the token
+ * @property {string} priceFeedId - Pyth Network price feed ID for USD pricing
+ */
 export const ROOTSTOCK_TOKEN_MAPPINGS = {
-  // RBTC (native token wrapped)
-  '0x542fda317318ebf1d3deaf76e0b632741a7e677d': 'crypto.BTC/USD',
-  // RIF Token
-  '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5': 'crypto.RIF/USD',
-  // USDT on Rootstock
-  '0xef213441a85df4d7acbdae0cf78004e1e486bb96': 'crypto.USDT/USD',
-  // DOC (Dollar on Chain)
-  '0xe700691da7b9851f2f35f8b8182c69c53ccad9db': 'crypto.DOC/USD',
-  // BPRO (BitPro)
-  '0x440cd83c160de5c96ddb20246815ea44c7abbca8': 'crypto.BPRO/USD'
+  // RBTC on Rootstock (native wrapped Bitcoin)
+  '0x542fda317318ebf1d3deaf76e0b632741a7e677d': {
+    symbol: 'RBTC',
+    decimals: 18,
+    priceFeedId: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43' // BTC/USD
+  }
 };
 
-// Combined mapping for easy lookup
+/**
+ * Combined token mappings from all supported networks
+ * Merges Polygon and Rootstock token mappings into a single lookup object
+ * 
+ * @type {Object.<string, Object>}
+ */
 export const ALL_TOKEN_MAPPINGS = {
   ...POLYGON_TOKEN_MAPPINGS,
   ...ROOTSTOCK_TOKEN_MAPPINGS
 };
 
-// Helper function to get price feed ID by token address
+/**
+ * Get the Pyth Network price feed ID for a given token address
+ * 
+ * @param {string} tokenAddress - The token contract address (case-insensitive)
+ * @returns {string|null} The Pyth price feed ID if found, null otherwise
+ * 
+ * @example
+ * // Get price feed ID for USDC on Polygon
+ * const feedId = getPriceFeedId('0x2791bca1f2de4661ed88a30c99a7a9449aa84174');
+ * console.log(feedId); // 'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a'
+ * 
+ * @example
+ * // Handle unknown token
+ * const feedId = getPriceFeedId('0x1234567890abcdef');
+ * console.log(feedId); // null
+ */
 export function getPriceFeedId(tokenAddress) {
-  return ALL_TOKEN_MAPPINGS[tokenAddress.toLowerCase()] || null;
+  const mapping = ALL_TOKEN_MAPPINGS[tokenAddress.toLowerCase()];
+  return mapping ? mapping.priceFeedId : null;
 }
 
-// Helper function to get all supported tokens for a chain
-export function getSupportedTokens(chain) {
-  switch (chain.toLowerCase()) {
-    case 'polygon':
-      return Object.keys(POLYGON_TOKEN_MAPPINGS);
-    case 'rootstock':
-      return Object.keys(ROOTSTOCK_TOKEN_MAPPINGS);
-    default:
-      return [];
-  }
+/**
+ * Get all supported token addresses across all networks
+ * 
+ * @returns {string[]} Array of all supported token contract addresses in lowercase
+ * 
+ * @example
+ * // Get all supported tokens
+ * const tokens = getSupportedTokens();
+ * console.log(tokens);
+ * // [
+ * //   '0x2791bca1f2de4661ed88a30c99a7a9449aa84174', // USDC
+ * //   '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270', // WMATIC
+ * //   '0x542fda317318ebf1d3deaf76e0b632741a7e677d'  // RBTC
+ * // ]
+ */
+export function getSupportedTokens() {
+  return Object.keys(ALL_TOKEN_MAPPINGS);
 }

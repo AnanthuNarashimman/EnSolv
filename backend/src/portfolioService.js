@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Portfolio aggregation service for multi-chain wallet data
+ * 
+ * This module provides functionality to fetch and aggregate portfolio data
+ * from multiple blockchain networks (Polygon and Rootstock) using GraphQL
+ * subgraphs and real-time price feeds from Pyth Network.
+ * 
+ * @author EnSolv Team
+ * @version 1.0.0
+ */
+
 import { GraphQLClient, gql } from 'graphql-request';
 import axios from 'axios';
 import { ethers } from 'ethers';
@@ -15,10 +26,20 @@ const {
 // Simple in-memory cache
 const cache = new Map();
 
+/**
+ * Sets a value in the cache with automatic expiration
+ * @param {string} key - The cache key
+ * @param {*} value - The value to cache
+ */
 function setCache(key, value) {
   cache.set(key, { value, expiry: Date.now() + CACHE_TTL_SECONDS * 1000 });
 }
 
+/**
+ * Retrieves a value from the cache if it exists and hasn't expired
+ * @param {string} key - The cache key to retrieve
+ * @returns {*|null} The cached value or null if not found/expired
+ */
 function getCache(key) {
   const entry = cache.get(key);
   if (!entry) return null;
@@ -100,6 +121,12 @@ const rootstockQuery = gql`
   }
 `;
 
+/**
+ * Fetches portfolio data from Polygon network using GraphQL subgraph
+ * @param {string} address - The wallet address to fetch data for
+ * @returns {Promise<Object>} Portfolio data including token balances and liquidity positions
+ * @throws {Error} When GraphQL request fails or network is unavailable
+ */
 async function fetchPolygonData(address) {
   try {
     // Check if we have a valid subgraph URL
@@ -142,6 +169,12 @@ async function fetchPolygonData(address) {
   }
 }
 
+/**
+ * Fetches portfolio data from Rootstock network using GraphQL subgraph
+ * @param {string} address - The wallet address to fetch data for
+ * @returns {Promise<Object>} Portfolio data including token positions and liquidity positions
+ * @throws {Error} When GraphQL request fails or network is unavailable
+ */
 async function fetchRootstockData(address) {
   try {
     // Check if we have a valid subgraph URL
@@ -175,6 +208,12 @@ async function fetchRootstockData(address) {
   }
 }
 
+/**
+ * Fetches real-time cryptocurrency prices from Pyth Network
+ * @param {string[]} tokenAddresses - Array of token contract addresses
+ * @returns {Promise<Object>} Object mapping token addresses to USD prices
+ * @throws {Error} When Pyth API request fails or times out
+ */
 // Enhanced Pyth price fetching with proper price feed IDs
 async function fetchPythPrices(tokenAddresses) {
   try {
@@ -254,6 +293,12 @@ async function fetchPythPrices(tokenAddresses) {
   }
 }
 
+/**
+ * Calculates the USD value of a liquidity position based on pool reserves and token prices
+ * @param {Object} position - The liquidity position object from GraphQL
+ * @param {Object} prices - Object mapping token addresses to USD prices
+ * @returns {Object|null} Calculated position value with token amounts and USD values, or null if invalid
+ */
 // Helper function to calculate liquidity position value
 function calculateLiquidityPositionValue(position, prices) {
   const { pair, liquidityTokenBalance } = position;
@@ -295,6 +340,12 @@ function calculateLiquidityPositionValue(position, prices) {
   };
 }
 
+/**
+ * Main function to aggregate portfolio data across multiple blockchain networks
+ * @param {string} address - The wallet address to fetch portfolio data for
+ * @returns {Promise<Object>} Complete portfolio data with token holdings, liquidity positions, and USD valuations
+ * @throws {Error} When address format is invalid or data fetching fails
+ */
 export async function getPortfolioData(address) {
   try {
     // Validate address format
