@@ -12,6 +12,7 @@
 import { GraphQLClient, gql } from 'graphql-request';
 import axios from 'axios';
 import { ethers } from 'ethers';
+import { Decimal } from 'decimal.js';
 import { getPriceFeedId } from './tokenMappings.js';
 
 // Environment variables (set in .env file)
@@ -26,8 +27,39 @@ const {
 // Parse cache TTL to ensure it's a number
 const cacheTimeToLive = Number(CACHE_TTL_SECONDS) || 60;
 
+// Mock prices for fallback when Pyth API is unavailable or no price feeds found
+const MOCK_PRICES = {
+  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': 1.0,    // USDC
+  '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270': 0.85,  // WMATIC
+  '0x542fda317318ebf1d3deaf76e0b632741a7e677d': 65000.0 // RBTC
+};
+
+// Default price for unknown tokens
+const DEFAULT_MOCK_PRICE = 1.0;
+
 // Simple in-memory cache
 const cache = new Map();
+
+/**
+ * Safely formats token units with decimal validation
+ * @param {string} value - The raw token value
+ * @param {string|number} decimals - Token decimals
+ * @param {string} tokenSymbol - Token symbol for logging
+ * @returns {number} Formatted amount or 0 if validation fails
+ */
+function safeFormatUnits(value, decimals, tokenSymbol = 'unknown') {
+  try {
+    const validatedDecimals = Number(decimals);
+    if (!Number.isInteger(validatedDecimals) || validatedDecimals < 0) {
+      console.warn(`Invalid decimals for token ${tokenSymbol}: ${decimals}, using 0 as fallback`);
+      return 0;
+    }
+    return parseFloat(ethers.formatUnits(value, validatedDecimals));
+  } catch (error) {
+    console.error(`Error formatting units for token ${tokenSymbol}:`, error.message);
+    return 0;
+  }
+}
 
 /**
  * Sets a value in the cache with automatic expiration
@@ -35,7 +67,7 @@ const cache = new Map();
  * @param {*} value - The value to cache
  */
 function setCache(key, value) {
-  cache.set(key, { value, expiry: Date.now() + cacheTimeToLive * 1000 });
+  cache.set(key, { value, expiry: Date.now() + (parseInt(CACHE_TTL_SECONDS, 10) || 60) * 1000 });
 }
 
 /**
@@ -231,15 +263,7 @@ async function fetchPythPrices(tokenAddresses) {
       const mockPrices = {};
       tokenAddresses.forEach(address => {
         const addr = address.toLowerCase();
-        if (addr === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174') { // USDC
-          mockPrices[addr] = 1.0;
-        } else if (addr === '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270') { // WMATIC
-          mockPrices[addr] = 0.85;
-        } else if (addr === '0x542fda317318ebf1d3deaf76e0b632741a7e677d') { // RBTC
-          mockPrices[addr] = 65000.0;
-        } else {
-          mockPrices[addr] = 1.0; // Default price
-        }
+        mockPrices[addr] = MOCK_PRICES[addr] || DEFAULT_MOCK_PRICE;
       });
       return mockPrices;
     }
@@ -267,9 +291,21 @@ async function fetchPythPrices(tokenAddresses) {
         if (priceFeedId) {
           const priceData = response.data.parsed.find(feed => feed.id === priceFeedId);
           if (priceData && priceData.price) {
-            // Pyth prices come with an exponent, calculate actual price
-            const price = parseFloat(priceData.price.price) * Math.pow(10, priceData.price.expo);
-            prices[address.toLowerCase()] = price;
+            // Pyth prices come with an exponent, calculate actual price using Decimal for precision
+            try {
+              const priceDecimal = new Decimal(priceData.price.price);
+              const exponentDecimal = new Decimal(10).pow(priceData.price.expo);
+              const price = priceDecimal.mul(exponentDecimal).toNumber();
+              
+              // Validate the result is a valid positive number
+              if (isFinite(price) && price > 0) {
+                prices[address.toLowerCase()] = price;
+              } else {
+                console.warn(`Invalid price calculated for ${address}: ${price}`);
+              }
+            } catch (error) {
+              console.error(`Error calculating price for ${address}:`, error.message);
+            }
           }
         }
       });
@@ -282,15 +318,7 @@ async function fetchPythPrices(tokenAddresses) {
     const mockPrices = {};
     tokenAddresses.forEach(address => {
       const addr = address.toLowerCase();
-      if (addr === '0x2791bca1f2de4661ed88a30c99a7a9449aa84174') { // USDC
-        mockPrices[addr] = 1.0;
-      } else if (addr === '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270') { // WMATIC
-        mockPrices[addr] = 0.85;
-      } else if (addr === '0x542fda317318ebf1d3deaf76e0b632741a7e677d') { // RBTC
-        mockPrices[addr] = 65000.0;
-      } else {
-        mockPrices[addr] = 1.0; // Default price
-      }
+      mockPrices[addr] = MOCK_PRICES[addr] || DEFAULT_MOCK_PRICE;
     });
     return mockPrices;
   }
@@ -313,8 +341,8 @@ function calculateLiquidityPositionValue(position, prices) {
   const poolShare = parseFloat(liquidityTokenBalance) / parseFloat(totalSupply);
   
   // Calculate token amounts owned
-  const token0Amount = poolShare * parseFloat(ethers.formatUnits(reserve0, token0.decimals));
-  const token1Amount = poolShare * parseFloat(ethers.formatUnits(reserve1, token1.decimals));
+  const token0Amount = poolShare * safeFormatUnits(reserve0, token0.decimals, token0.symbol);
+  const token1Amount = poolShare * safeFormatUnits(reserve1, token1.decimals, token1.symbol);
 
   // Calculate USD values
   const token0Price = prices[token0.id.toLowerCase()] || 0;
@@ -397,7 +425,7 @@ export async function getPortfolioData(address) {
 
     // Process Polygon token balances
     polygonData.tokenBalances.forEach(balance => {
-      const amount = parseFloat(ethers.formatUnits(balance.balance, balance.token.decimals));
+      const amount = safeFormatUnits(balance.balance, balance.token.decimals, balance.token.symbol);
       const price = prices[balance.token.id.toLowerCase()] || 0;
       const usdValue = amount * price;
       
@@ -418,7 +446,7 @@ export async function getPortfolioData(address) {
 
     // Process Rootstock token positions
     rootstockData.tokenPositions.forEach(position => {
-      const amount = parseFloat(ethers.formatUnits(position.balance, position.token.decimals));
+      const amount = safeFormatUnits(position.balance, position.token.decimals, position.token.symbol);
       const price = prices[position.token.id.toLowerCase()] || 0;
       const usdValue = amount * price;
       

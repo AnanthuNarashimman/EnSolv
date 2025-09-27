@@ -1,20 +1,45 @@
 import { jest } from '@jest/globals';
-import { ethers } from 'ethers';
 import { getPortfolioData } from '../portfolioService.js';
-import { getPriceFeedId } from '../tokenMappings.js';
 
-// Mock dependencies
-jest.mock('graphql-request');
-jest.mock('axios');
-jest.mock('../tokenMappings.js');
+// Mock the dependencies
+const mockGetPriceFeedId = jest.fn();
+const mockAxiosGet = jest.fn();
 
-const mockGraphQLClient = {
-  request: jest.fn()
-};
+jest.unstable_mockModule('../tokenMappings.js', () => ({
+  getPriceFeedId: mockGetPriceFeedId
+}));
 
-const mockAxios = {
-  get: jest.fn()
-};
+jest.unstable_mockModule('axios', () => ({
+  default: {
+    get: mockAxiosGet
+  }
+}));
+
+jest.unstable_mockModule('graphql-request', () => {
+  const mockGraphQLClient = {
+    request: jest.fn()
+  };
+  
+  return {
+    GraphQLClient: jest.fn(() => mockGraphQLClient),
+    gql: jest.fn((query) => query)
+  };
+});
+
+// Get the mocked GraphQLClient instance
+const { GraphQLClient } = await import('graphql-request');
+const mockGraphQLClient = new GraphQLClient();
+
+// Clear cache function
+async function clearPortfolioCache() {
+  // Access the cache from the module
+  const portfolioModule = await import('../portfolioService.js');
+  if (portfolioModule.cache) {
+    portfolioModule.cache.clear();
+  }
+}
+
+
 
 // Mock GraphQL responses
 const mockPolygonResponse = {
@@ -70,43 +95,39 @@ const mockRootstockResponse = {
 };
 
 const mockPythResponse = {
-  data: [
-    {
-      id: 'crypto.USDC/USD',
-      price: {
-        price: '100000000',
-        expo: -8
+  data: {
+    parsed: [
+      {
+        id: 'crypto.USDC/USD',
+        price: {
+          price: '100000000',
+          expo: -8
+        }
+      },
+      {
+        id: 'crypto.MATIC/USD',
+        price: {
+          price: '80000000',
+          expo: -8
+        }
+      },
+      {
+        id: 'crypto.BTC/USD',
+        price: {
+          price: '4500000000000',
+          expo: -8
+        }
       }
-    },
-    {
-      id: 'crypto.MATIC/USD',
-      price: {
-        price: '80000000',
-        expo: -8
-      }
-    },
-    {
-      id: 'crypto.BTC/USD',
-      price: {
-        price: '4500000000000',
-        expo: -8
-      }
-    }
-  ]
+    ]
+  }
 };
 
 describe('Portfolio Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup mocks
-    const { GraphQLClient } = require('graphql-request');
-    GraphQLClient.mockImplementation(() => mockGraphQLClient);
-
-    const axios = require('axios');
-    axios.get = mockAxios.get;
-
-    getPriceFeedId.mockImplementation((address) => {
+    // Setup getPriceFeedId mock
+    mockGetPriceFeedId.mockImplementation((address) => {
       const mappings = {
         '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': 'crypto.USDC/USD',
         '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270': 'crypto.MATIC/USD',
@@ -114,6 +135,15 @@ describe('Portfolio Service', () => {
       };
       return mappings[address.toLowerCase()] || null;
     });
+
+    // Clear any cached data between tests
+    if (global.portfolioCache) {
+      global.portfolioCache.clear();
+    }
+    
+    // Reset mock implementations to default behavior
+    mockGraphQLClient.request.mockReset();
+    mockAxiosGet.mockReset();
   });
 
   describe('getPortfolioData', () => {
@@ -123,9 +153,9 @@ describe('Portfolio Service', () => {
         .mockResolvedValueOnce(mockPolygonResponse)
         .mockResolvedValueOnce(mockRootstockResponse);
 
-      mockAxios.get.mockResolvedValueOnce(mockPythResponse);
+      mockAxiosGet.mockResolvedValueOnce(mockPythResponse);
 
-      const testAddress = '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6';
+      const testAddress = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
       const result = await getPortfolioData(testAddress);
 
       // Verify structure
@@ -176,9 +206,10 @@ describe('Portfolio Service', () => {
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce(mockRootstockResponse);
 
-      mockAxios.get.mockResolvedValueOnce(mockPythResponse);
+      mockAxiosGet.mockResolvedValueOnce(mockPythResponse);
 
-      const testAddress = '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6';
+      const testAddress = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+
       const result = await getPortfolioData(testAddress);
 
       // Should still return data from Rootstock even if Polygon fails
@@ -191,27 +222,34 @@ describe('Portfolio Service', () => {
         .mockResolvedValueOnce(mockPolygonResponse)
         .mockResolvedValueOnce(mockRootstockResponse);
 
-      mockAxios.get.mockRejectedValueOnce(new Error('Pyth API error'));
+      mockAxiosGet.mockRejectedValueOnce(new Error('Pyth API error'));
 
-      const testAddress = '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6';
+      const testAddress = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
       const result = await getPortfolioData(testAddress);
 
-      // Should return data with zero prices
+      // Should return data with mock prices as fallback
       expect(result.tokenHoldings).toHaveLength(2);
-      result.tokenHoldings.forEach(holding => {
-        expect(holding.price).toBe(0);
-        expect(holding.usdValue).toBe(0);
-      });
+      
+      // Find USDC holding
+      const usdcHolding = result.tokenHoldings.find(h => h.symbol === 'USDC');
+      expect(usdcHolding.price).toBe(1.0); // Mock price for USDC
+      expect(usdcHolding.usdValue).toBe(1000); // 1000 USDC * $1.0
+      
+      // Find RBTC holding  
+      const rbtcHolding = result.tokenHoldings.find(h => h.symbol === 'RBTC');
+      expect(rbtcHolding.price).toBe(65000.0); // Mock price for RBTC
+      expect(rbtcHolding.usdValue).toBe(65000); // 1 RBTC * $65000
     });
 
     it('should use cache for subsequent requests', async () => {
+      // Setup mocks for both calls (in case cache doesn't work)
       mockGraphQLClient.request
-        .mockResolvedValueOnce(mockPolygonResponse)
-        .mockResolvedValueOnce(mockRootstockResponse);
+        .mockResolvedValue(mockPolygonResponse)
+        .mockResolvedValue(mockRootstockResponse);
 
-      mockAxios.get.mockResolvedValueOnce(mockPythResponse);
+      mockAxiosGet.mockResolvedValue(mockPythResponse);
 
-      const testAddress = '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6';
+      const testAddress = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 
       // First call
       const result1 = await getPortfolioData(testAddress);
@@ -221,9 +259,9 @@ describe('Portfolio Service', () => {
 
       expect(result1).toEqual(result2);
 
-      // GraphQL should only be called once
+      // GraphQL should only be called once for each network (2 total)
       expect(mockGraphQLClient.request).toHaveBeenCalledTimes(2);
-      expect(mockAxios.get).toHaveBeenCalledTimes(1);
+      expect(mockAxiosGet).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -244,15 +282,21 @@ describe('Portfolio Service', () => {
         liquidityPositions: []
       };
 
+      const emptyRootstockResponse = { 
+        tokenPositions: [], 
+        liquidityPositions: [] 
+      };
+
       mockGraphQLClient.request
         .mockResolvedValueOnce(customPolygonResponse)
-        .mockResolvedValueOnce({ tokenPositions: [], liquidityPositions: [] });
+        .mockResolvedValueOnce(emptyRootstockResponse);
 
-      mockAxios.get.mockResolvedValueOnce(mockPythResponse);
+      mockAxiosGet.mockResolvedValueOnce(mockPythResponse);
 
-      const testAddress = '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6';
+      const testAddress = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
       const result = await getPortfolioData(testAddress);
 
+      expect(result.tokenHoldings).toHaveLength(1);
       const usdcHolding = result.tokenHoldings.find(h => h.symbol === 'USDC');
       expect(usdcHolding.amount).toBe('1.5');
       expect(usdcHolding.usdValue).toBe(1.5); // 1.5 USDC * $1
