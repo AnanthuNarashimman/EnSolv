@@ -25,7 +25,7 @@ export class UnifiedPortfolioService {
       }
     } catch (error) {
       // If real API fails, fallback to mock API (if available)
-      if (this.useRealAPI && !import.meta.env.VITE_FORCE_REAL_API) {
+      if (this.useRealAPI && import.meta.env.VITE_FORCE_REAL_API !== 'true') {
         console.warn('Real API failed, falling back to mock API:', error);
         try {
           return await PortfolioAPI.getPortfolio(address);
@@ -107,9 +107,8 @@ export class UnifiedPortfolioService {
   static async healthCheck(): Promise<boolean> {
     try {
       if (this.useRealAPI) {
-        // For real API, we can check if we can fetch prices
-        const testPrice = await RealPortfolioAPI['getTokenPrice']('ethereum');
-        return testPrice !== null;
+        // Use the public health check method
+        return await RealPortfolioAPI.healthCheck();
       } else {
         // For mock API, check the health endpoint
         await PortfolioAPI.checkHealth();

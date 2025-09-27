@@ -57,8 +57,8 @@ importers:
         specifier: ^19.1.1
         version: 19.1.1(react@19.1.1)
       react-router-dom:
-        specifier: ^7.9.3
-        version: 7.9.3(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+        specifier: ^6.28.0
+        version: 6.30.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       recharts:
         specifier: ^3.2.1
         version: 3.2.1(@types/react@19.1.14)(react-dom@19.1.1(react@19.1.1))(react-is@18.3.1)(react@19.1.1)(redux@5.0.1)
@@ -87,9 +87,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.9
         version: 19.1.9(@types/react@19.1.14)
-      '@types/recharts':
-        specifier: ^2.0.1
-        version: 2.0.1(@types/react@19.1.14)(react-dom@19.1.1(react@19.1.1))(react-is@18.3.1)(react@19.1.1)(redux@5.0.1)
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.0.3(vite@7.1.7(@types/node@22.18.6)(tsx@4.20.6))
@@ -1061,6 +1058,10 @@ packages:
       react-redux:
         optional: true
 
+  '@remix-run/router@1.23.0':
+    resolution: {integrity: sha512-O3rHJzAQKamUz1fvE0Qaw0xSFqsA/yafi2iqeE0pvdFtCO1viYx8QL6f3Ln/aCCTLxs68SLf0KPM9eSeM8yBnA==}
+    engines: {node: '>=14.0.0'}
+
   '@rolldown/pluginutils@1.0.0-beta.35':
     resolution: {integrity: sha512-slYrCpoxJUqzFDDNlvrOYRazQUNRvWPjXA17dAOISY3rDMxX6k8K4cj2H+hEYMHF81HO3uNd5rHVigAWRM5dSg==}
 
@@ -1269,10 +1270,6 @@ packages:
 
   '@types/react@19.1.14':
     resolution: {integrity: sha512-ukd93VGzaNPMAUPy0gRDSC57UuQbnH9Kussp7HBjM06YFi9uZTFhOvMSO2OKqXm1rSgzOE+pVx1k1PYHGwlc8Q==}
-
-  '@types/recharts@2.0.1':
-    resolution: {integrity: sha512-/cFs7oiafzByUwBSWA1IzE6FW+ppPwQAWsDTadSgVOwzveY9MESpyLHyyHY0SfPPKLW4+4qVNYHPXd0rFiC8vg==}
-    deprecated: This is a stub types definition. recharts provides its own type definitions, so you do not need this installed.
 
   '@types/use-sync-external-store@0.0.6':
     resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
@@ -1486,10 +1483,6 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
-
-  cookie@1.0.2:
-    resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
-    engines: {node: '>=18'}
 
   cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
@@ -2130,22 +2123,18 @@ packages:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
     engines: {node: '>=0.10.0'}
 
-  react-router-dom@7.9.3:
-    resolution: {integrity: sha512-1QSbA0TGGFKTAc/aWjpfW/zoEukYfU4dc1dLkT/vvf54JoGMkW+fNA+3oyo2gWVW1GM7BxjJVHz5GnPJv40rvg==}
-    engines: {node: '>=20.0.0'}
+  react-router-dom@6.30.1:
+    resolution: {integrity: sha512-llKsgOkZdbPU1Eg3zK8lCn+sjD9wMRZZPuzmdWWX5SUs8OFkN5HnFVC0u5KMeMaC9aoancFI/KoLuKPqN+hxHw==}
+    engines: {node: '>=14.0.0'}
     peerDependencies:
-      react: '>=18'
-      react-dom: '>=18'
+      react: '>=16.8'
+      react-dom: '>=16.8'
 
-  react-router@7.9.3:
-    resolution: {integrity: sha512-4o2iWCFIwhI/eYAIL43+cjORXYn/aRQPgtFRRZb3VzoyQ5Uej0Bmqj7437L97N9NJW4wnicSwLOLS+yCXfAPgg==}
-    engines: {node: '>=20.0.0'}
+  react-router@6.30.1:
+    resolution: {integrity: sha512-X1m21aEmxGXqENEPG3T6u0Th7g0aS4ZmoNynhbs+Cn+q+QGTLt+d5IQ2bHAXKzKcxGJjxACpVbnYQSCRcfxHlQ==}
+    engines: {node: '>=14.0.0'}
     peerDependencies:
-      react: '>=18'
-      react-dom: '>=18'
-    peerDependenciesMeta:
-      react-dom:
-        optional: true
+      react: '>=16.8'
 
   react@19.1.1:
     resolution: {integrity: sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==}
@@ -2214,9 +2203,6 @@ packages:
     resolution: {integrity: sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==}
     engines: {node: '>=10'}
     hasBin: true
-
-  set-cookie-parser@2.7.1:
-    resolution: {integrity: sha512-IOc8uWeOZgnb3ptbCURJWNjWUPcO3ZnTTdzsurqERrP6nPyv+paC55vJM0LpOlT2ne+Ix+9+CRG1MNLlyZ4GjQ==}
 
   shebang-command@2.0.0:
     resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
@@ -3482,6 +3468,8 @@ snapshots:
       react: 19.1.1
       react-redux: 9.2.0(@types/react@19.1.14)(react@19.1.1)(redux@5.0.1)
 
+  '@remix-run/router@1.23.0': {}
+
   '@rolldown/pluginutils@1.0.0-beta.35': {}
 
   '@rollup/rollup-android-arm-eabi@4.52.2':
@@ -3654,16 +3642,6 @@ snapshots:
   '@types/react@19.1.14':
     dependencies:
       csstype: 3.1.3
-
-  '@types/recharts@2.0.1(@types/react@19.1.14)(react-dom@19.1.1(react@19.1.1))(react-is@18.3.1)(react@19.1.1)(redux@5.0.1)':
-    dependencies:
-      recharts: 3.2.1(@types/react@19.1.14)(react-dom@19.1.1(react@19.1.1))(react-is@18.3.1)(react@19.1.1)(redux@5.0.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-      - react-dom
-      - react-is
-      - redux
 
   '@types/use-sync-external-store@0.0.6': {}
 
@@ -3889,8 +3867,6 @@ snapshots:
   concat-map@0.0.1: {}
 
   convert-source-map@2.0.0: {}
-
-  cookie@1.0.2: {}
 
   cross-fetch@3.2.0:
     dependencies:
@@ -4540,19 +4516,17 @@ snapshots:
 
   react-refresh@0.17.0: {}
 
-  react-router-dom@7.9.3(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  react-router-dom@6.30.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
+      '@remix-run/router': 1.23.0
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
-      react-router: 7.9.3(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react-router: 6.30.1(react@19.1.1)
 
-  react-router@7.9.3(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  react-router@6.30.1(react@19.1.1):
     dependencies:
-      cookie: 1.0.2
+      '@remix-run/router': 1.23.0
       react: 19.1.1
-      set-cookie-parser: 2.7.1
-    optionalDependencies:
-      react-dom: 19.1.1(react@19.1.1)
 
   react@19.1.1: {}
 
@@ -4639,8 +4613,6 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.2: {}
-
-  set-cookie-parser@2.7.1: {}
 
   shebang-command@2.0.0:
     dependencies:

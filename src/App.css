@@ -90,12 +90,6 @@ button:not(:disabled):active {
     transform: translateY(0);
 }
 
-/* Back Button Hover */
-button:has(.back-icon):hover .back-icon,
-button:has(span:contains("←")):hover span:first-child {
-    transform: translateX(-3px);
-}
-
 /* Portfolio Header Button Effects */
 .portfolio-header button:hover {
     background: rgba(130, 71, 229, 0.12) !important;

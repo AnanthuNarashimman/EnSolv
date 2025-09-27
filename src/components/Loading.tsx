@@ -1,6 +1,13 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 
+// Move size classes to module level to avoid recreation on every render
+const SIZE_CLASSES = {
+  sm: 'h-4 w-4',
+  md: 'h-6 w-6',
+  lg: 'h-8 w-8'
+} as const;
+
 interface LoadingSkeletonProps {
   className?: string;
 }
@@ -21,14 +28,16 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   className, 
   size = 'md' 
 }) => {
-  const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  };
+  // Use safe fallback when indexing by size
+  const sizeClass = SIZE_CLASSES[size] || SIZE_CLASSES.md;
 
   return (
-    <div className={cn("animate-spin rounded-full border-2 border-gray-300 border-t-primary", sizeClasses[size], className)}>
+    <div 
+      className={cn("animate-spin rounded-full border-2 border-gray-300 border-t-primary", sizeClass, className)}
+      role="status"
+      aria-label="Loading"
+    >
+      <span className="sr-only">Loading...</span>
     </div>
   );
 };

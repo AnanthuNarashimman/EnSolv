@@ -1043,6 +1043,21 @@ export class RealPortfolioAPI {
   }
 
   /**
+   * Health check for the Real Portfolio API
+   * Tests basic connectivity and functionality
+   */
+  static async healthCheck(): Promise<boolean> {
+    try {
+      // Test basic price fetching capability
+      const price = await this.getTokenPrice('ethereum');
+      return price !== null && price.usd > 0;
+    } catch (error) {
+      console.error('Real API health check failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Clear cache for testing or manual refresh
    */
   static clearCache(): void {
