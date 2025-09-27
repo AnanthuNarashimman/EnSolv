@@ -35,11 +35,9 @@ app.use((req, res, next) => {
   console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
   
   // Log response status when request completes
-  const originalSend = res.send;
-  res.send = function(data) {
+  res.on('finish', () => {
     console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`);
-    originalSend.call(this, data);
-  };
+  });
   
   next();
 });
