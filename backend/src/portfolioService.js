@@ -23,6 +23,9 @@ const {
   CACHE_TTL_SECONDS = 60
 } = process.env;
 
+// Parse cache TTL to ensure it's a number
+const cacheTimeToLive = Number(CACHE_TTL_SECONDS) || 60;
+
 // Simple in-memory cache
 const cache = new Map();
 
@@ -32,7 +35,7 @@ const cache = new Map();
  * @param {*} value - The value to cache
  */
 function setCache(key, value) {
-  cache.set(key, { value, expiry: Date.now() + CACHE_TTL_SECONDS * 1000 });
+  cache.set(key, { value, expiry: Date.now() + cacheTimeToLive * 1000 });
 }
 
 /**
