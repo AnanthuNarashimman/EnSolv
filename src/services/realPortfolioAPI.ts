@@ -7,6 +7,8 @@ const ETHEREUM_RPC =
   import.meta.env.VITE_ETHEREUM_RPC_URL || "https://eth.llamarpc.com";
 const POLYGON_RPC =
   import.meta.env.VITE_POLYGON_RPC_URL || "https://polygon-rpc.com";
+const BASE_RPC =
+  import.meta.env.VITE_BASE_RPC_URL || "https://mainnet.base.org";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -112,6 +114,7 @@ export class RealPortfolioAPI {
   private static providers = {
     ethereum: new ethers.JsonRpcProvider(ETHEREUM_RPC),
     polygon: new ethers.JsonRpcProvider(POLYGON_RPC),
+    base: new ethers.JsonRpcProvider(BASE_RPC),
   };
 
   private static nativeTokens = {
@@ -126,6 +129,12 @@ export class RealPortfolioAPI {
       name: "Polygon",
       decimals: 18,
       coingeckoId: "matic-network",
+    },
+    base: {
+      symbol: "ETH",
+      name: "Base ETH",
+      decimals: 18,
+      coingeckoId: "ethereum",
     },
   };
 
@@ -223,14 +232,15 @@ export class RealPortfolioAPI {
       console.log("Fetching real portfolio for:", address);
 
       // Fetch data from multiple chains in parallel
-      const [ethereumData, polygonData] = await Promise.allSettled([
+      const [ethereumData, polygonData, baseData] = await Promise.allSettled([
         this.fetchChainData(address, "ethereum"),
         this.fetchChainData(address, "polygon"),
+        this.fetchChainData(address, "base"),
       ]);
 
       // Process results
       const allTokens: TokenHolding[] = [];
-      const networkTotals = { ethereum: 0, polygon: 0, rootstock: 0 };
+      const networkTotals = { ethereum: 0, polygon: 0, rootstock: 0, base: 0 };
 
       if (ethereumData.status === "fulfilled" && ethereumData.value) {
         allTokens.push(...ethereumData.value);
@@ -243,6 +253,14 @@ export class RealPortfolioAPI {
       if (polygonData.status === "fulfilled" && polygonData.value) {
         allTokens.push(...polygonData.value);
         networkTotals.polygon = polygonData.value.reduce(
+          (sum, token) => sum + token.usdValue,
+          0,
+        );
+      }
+
+      if (baseData.status === "fulfilled" && baseData.value) {
+        allTokens.push(...baseData.value);
+        networkTotals.base = baseData.value.reduce(
           (sum, token) => sum + token.usdValue,
           0,
         );
@@ -293,7 +311,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchChainData(
     address: string,
-    network: "ethereum" | "polygon",
+    network: "ethereum" | "polygon" | "base",
   ): Promise<TokenHolding[]> {
     try {
       const tokens: TokenHolding[] = [];
@@ -359,7 +377,7 @@ export class RealPortfolioAPI {
    */
   private static async getNativeBalance(
     address: string,
-    network: "ethereum" | "polygon",
+    network: "ethereum" | "polygon" | "base",
   ): Promise<number> {
     try {
       const provider = this.providers[network];
@@ -376,7 +394,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchTokenBalancesCovalent(
     address: string,
-    network: "ethereum" | "polygon" = "ethereum",
+    network: "ethereum" | "polygon" | "base" = "ethereum",
   ): Promise<TokenHolding[]> {
     try {
       const chainId = CHAIN_IDS[network];
@@ -433,7 +451,7 @@ export class RealPortfolioAPI {
    */
   private static async discoverTokensAdvanced(
     address: string,
-    network: "ethereum" | "polygon",
+    network: "ethereum" | "polygon" | "base",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
 
@@ -446,6 +464,9 @@ export class RealPortfolioAPI {
         ],
         polygon: [
           "https://unpkg.com/quickswap-default-token-list@1.2.20/build/quickswap-default.tokenlist.json",
+        ],
+        base: [
+          "https://tokens.uniswap.org", // Uniswap supports Base
         ],
       };
 
@@ -490,7 +511,7 @@ export class RealPortfolioAPI {
   private static async batchCheckBalances(
     address: string,
     tokenList: any[],
-    network: "ethereum" | "polygon",
+    network: "ethereum" | "polygon" | "base",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const provider = this.providers[network];
@@ -565,7 +586,7 @@ export class RealPortfolioAPI {
    */
   private static async fetchCommonTokenBalances(
     address: string,
-    network: "ethereum" | "polygon" = "ethereum",
+    network: "ethereum" | "polygon" | "base" = "ethereum",
   ): Promise<TokenHolding[]> {
     const tokens: TokenHolding[] = [];
     const networkTokens = COMMON_TOKENS[network] || {};
@@ -698,7 +719,7 @@ export class RealPortfolioAPI {
    */
   private static async getTokenPriceByAddress(
     address: string,
-    network: "ethereum" | "polygon" = "ethereum",
+    network: "ethereum" | "polygon" | "base" = "ethereum",
   ): Promise<TokenPrice | null> {
     // Check cache first
     const cacheKey = `tokenprice:${network}:${address.toLowerCase()}`;
@@ -706,7 +727,18 @@ export class RealPortfolioAPI {
     if (cached) return cached;
 
     return this.withRetry(async () => {
-      const platformId = network === "polygon" ? "polygon-pos" : "ethereum";
+      let platformId;
+      switch (network) {
+        case "polygon":
+          platformId = "polygon-pos";
+          break;
+        case "base":
+          platformId = "base";
+          break;
+        default:
+          platformId = "ethereum";
+      }
+      
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/token_price/${platformId}?contract_addresses=${address}&vs_currencies=usd&include_24hr_change=true`,
       );
